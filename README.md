@@ -52,7 +52,7 @@ src/
 
 ### 1. Supabase
 1. Crie um projeto em https://supabase.com (região São Paulo).
-2. **SQL Editor** > cole e rode, **nesta ordem**, cada arquivo de `supabase/migrations/`: `0001_init.sql`, `0002_cardapio.sql`, `0003_vitrines.sql`, `0004_lembretes.sql`.
+2. **SQL Editor** > cole e rode, **nesta ordem**, cada arquivo de `supabase/migrations/`: `0001_init.sql`, `0002_cardapio.sql`, `0003_vitrines.sql`, `0004_lembretes.sql`, `0005_cobranca.sql`.
 3. **Authentication > URL Configuration**:
    - *Site URL*: `https://seudominio.com.br`
    - *Redirect URLs*: `https://seudominio.com.br/**` e `http://localhost:5173/**`
@@ -111,12 +111,41 @@ Usado para: confirmação de cadastro, código de acesso do cliente e lembretes 
    ```
    A partir daí, o banco envia os lembretes a cada 5 minutos (histórico em **Painel > Lembretes**).
 
+## Cobrança das mensalidades (Asaas)
+
+O dono paga em **Painel > Assinatura** (cartão com cobrança automática todo mês, PIX ou boleto).
+O Asaas avisa o sistema, que libera o painel. Fatura vencida há mais de 5 dias bloqueia a vitrine;
+o pagamento desbloqueia sozinho. A rotina roda todo dia às 9h.
+
+### Ligar (primeiro no ambiente de testes)
+1. Conta de testes: https://sandbox.asaas.com. Em **Integrações > Chave de API**, gere a chave.
+2. **Supabase > Edge Functions > Deploy a new function > Via editor**, publique:
+   - `asaas-checkout`: cole `supabase/functions/asaas-checkout/index.ts`.
+   - `asaas-webhook`: cole `supabase/functions/asaas-webhook/index.ts` e, nos detalhes da função,
+     **desligue "Verify JWT"** (o Asaas não envia login do Supabase).
+3. **Supabase > Edge Functions > Secrets**, adicione:
+   - `ASAAS_API_KEY`: a chave do passo 1
+   - `ASAAS_ENV`: `sandbox`
+   - `ASAAS_WEBHOOK_TOKEN`: um texto secreto longo (o mesmo do passo 4)
+4. **Asaas > Integrações > Webhooks > Adicionar**:
+   - URL: `https://SEU-PROJETO.supabase.co/functions/v1/asaas-webhook`
+   - Token de autenticação: o mesmo `ASAAS_WEBHOOK_TOKEN`
+   - Eventos: todos de **Cobranças**; versão da API v3; fila de sincronização ligada.
+5. Teste: escolha um plano em Painel > Assinatura > **Pagar agora**. No sandbox, pague com um dos
+   cartões de teste da documentação do Asaas ("Testando pagamento com cartão de crédito"), ou confirme
+   a cobrança manualmente pelo painel do sandbox.
+
+### Virar para o modo real
+Crie a conta real em https://www.asaas.com, troque `ASAAS_API_KEY` pela chave de produção,
+`ASAAS_ENV` para `production` e cadastre o mesmo webhook na conta real.
+
 ## Antes de lançar
 - [ ] Preencher CNPJ, e-mail de contato e cidade do foro em `src/config/brand.js` (`LEGAL`) e revisar Termos e Privacidade
 - [ ] Preencher o WhatsApp de suporte em `src/config/brand.js` (`SUPPORT_WHATSAPP`)
 - [ ] Configurar os e-mails com o domínio (seção acima)
 - [ ] Apagar as vitrines de teste com `supabase/scripts/limpar-dados-de-teste.sql`
 - [ ] Religar **Confirm email** em Authentication > Providers > Email
+- [ ] Asaas em modo real (seção Cobrança)
 
 ## Planos e limites
 
@@ -137,7 +166,6 @@ Os limites são aplicados pelo banco, não só pela tela.
 
 ## Próximos passos
 
-- [ ] Integração com gateway de pagamento (Asaas sugerido): Edge Function para criar a assinatura + webhook que ativa/marca atraso automaticamente
 - [ ] Lembretes automáticos por WhatsApp (API paga). Por e-mail já estão prontos.
 - [ ] Pagamento online / sinal com split (porcentagem da plataforma)
 - [ ] Relatórios (Profissional) e financeiro/dashboard (Premium)

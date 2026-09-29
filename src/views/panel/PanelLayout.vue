@@ -40,7 +40,9 @@ const nav = computed(() => navFor(biz.business?.kind ?? 'agenda').map((item) => 
 const FREE_WHEN_INACTIVE = ['/painel/assinatura', '/painel/perfil']
 
 function enforceAccess() {
-  if (biz.loading || !biz.business || biz.business.status !== 'approved') return
+  // Bloqueado por atraso também entra no painel, mas só na tela de Assinatura (para pagar).
+  const billingBlocked = biz.business?.status === 'blocked' && biz.business?.billing_blocked
+  if (biz.loading || !biz.business || (biz.business.status !== 'approved' && !billingBlocked)) return
   const kind = biz.business.kind
   // Aprovado mas sem assinatura ativa: só a tela de assinatura e o perfil ficam liberados.
   if (!biz.live && !FREE_WHEN_INACTIVE.includes(route.path)) {
@@ -118,7 +120,7 @@ async function requestBusiness() {
   </div>
 
   <!-- Em análise / recusado / bloqueado -->
-  <div v-else-if="biz.business.status !== 'approved'" class="narrow" style="max-width: 520px">
+  <div v-else-if="biz.business.status !== 'approved' && !biz.business.billing_blocked" class="narrow" style="max-width: 520px">
     <div class="auth-logo"><AppLogo /></div>
     <div class="card glow">
       <h3>{{ biz.business.name }}</h3>

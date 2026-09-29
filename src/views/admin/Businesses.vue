@@ -88,7 +88,11 @@ async function saveEdit() {
     p_discount_until: discountUntil(e),
     p_discount_note: e.discount_note || null,
   })
-  if (ok) editing.value = null
+  if (ok) {
+    // Se a empresa paga pelo Asaas, atualiza o valor lá também (sem efeito para quem paga por fora).
+    supabase.functions.invoke('asaas-checkout', { body: { action: 'sync-price', business_id: e.business.id } }).catch(() => {})
+    editing.value = null
+  }
 }
 
 // ---- Pagamento manual ----
