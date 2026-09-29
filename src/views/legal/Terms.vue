@@ -31,6 +31,10 @@ import { APP_NAME, APP_DOMAIN, LEGAL } from '@/config/brand'
     <ul>
       <li>O uso é cobrado por assinatura mensal, conforme o plano escolhido e os valores informados no momento da contratação.</li>
       <li>Condições comerciais negociadas individualmente valem pelo prazo combinado. Depois disso, vale o preço de tabela.</li>
+      <li>
+        Ao valor da mensalidade é acrescida a taxa cobrada pela instituição de pagamento, que varia conforme a forma
+        escolhida (cartão de crédito, PIX ou boleto). O valor total é informado antes de cada pagamento.
+      </li>
       <li>Em caso de atraso no pagamento, o acesso ao painel e à Vitrine pode ser suspenso até a regularização.</li>
       <li>O Estabelecimento pode cancelar a qualquer momento. O cancelamento vale ao fim do período já pago, sem reembolso proporcional.</li>
       <li>Podemos alterar preços e planos com aviso prévio de pelo menos 30 dias.</li>

@@ -165,7 +165,7 @@ const features = [
   <section id="planos" class="container section">
     <p class="eyebrow center">Planos</p>
     <h2 class="section-title">Planos de agendamento para o tamanho do seu negócio</h2>
-    <p class="muted" style="text-align: center; margin: -20px 0 28px">As outras vitrines têm plano único, com os valores mostrados acima.</p>
+    <p class="muted" style="text-align: center; margin: -20px 0 28px">As outras vitrines têm plano único, com os valores mostrados acima. A taxa do meio de pagamento (cartão, PIX ou boleto) é somada à mensalidade.</p>
     <div class="grid three">
       <div v-for="(plan, i) in plans" :key="plan.id" class="card plan" :class="{ featured: plan.id === 'profissional' }">
         <span v-if="plan.id === 'profissional'" class="badge blue plan-tag">Mais escolhido</span>
@@ -173,6 +173,7 @@ const features = [
         <div class="price">
           <span class="gradient-text">{{ money(plan.base_price) }}</span><small>/mês</small>
         </div>
+        <p class="muted fee-note">+ taxa do meio de pagamento (a partir de R$ 1,99)</p>
         <ul class="plan-list">
           <li v-for="l in limits(plan)" :key="l"><Icon name="check" />{{ l }}</li>
           <li v-if="i > 0" class="plus">Tudo do {{ plans[i - 1].name }}, mais:</li>
@@ -293,7 +294,8 @@ const features = [
   border-color: rgba(59, 130, 246, 0.5); box-shadow: var(--shadow), 0 0 40px rgba(59, 130, 246, 0.22);
 }
 .plan-tag { position: absolute; top: 20px; right: 20px; }
-.price { margin: 4px 0 18px; }
+.price { margin: 4px 0 4px; }
+.fee-note { font-size: 0.8rem; margin: 0 0 16px; }
 .price span { font-size: 2.4rem; font-weight: 800; }
 .price small { font-size: 1rem; }
 .plan-list { list-style: none; padding: 0; margin: 0 0 24px; flex: 1; display: grid; gap: 9px; font-size: 0.93rem; }

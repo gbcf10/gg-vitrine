@@ -12,8 +12,9 @@
 //   ASAAS_ENV             "sandbox" (padrão) ou "production"
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
-const ASAAS_KEY = Deno.env.get('ASAAS_API_KEY')
-const ASAAS_URL = Deno.env.get('ASAAS_ENV') === 'production'
+// .trim(): ignora espaço ou quebra de linha colados junto com o segredo.
+const ASAAS_KEY = Deno.env.get('ASAAS_API_KEY')?.trim()
+const ASAAS_URL = Deno.env.get('ASAAS_ENV')?.trim().toLowerCase() === 'production'
   ? 'https://api.asaas.com/v3'
   : 'https://api-sandbox.asaas.com/v3'
 
@@ -27,8 +28,8 @@ async function asaas(path: string, method: string, body: unknown) {
 }
 
 Deno.serve(async (req) => {
-  const token = Deno.env.get('ASAAS_WEBHOOK_TOKEN')
-  if (!token || req.headers.get('asaas-access-token') !== token) {
+  const token = Deno.env.get('ASAAS_WEBHOOK_TOKEN')?.trim()
+  if (!token || req.headers.get('asaas-access-token')?.trim() !== token) {
     return new Response('não autorizado', { status: 401 })
   }
 

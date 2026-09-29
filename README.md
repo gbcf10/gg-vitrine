@@ -52,7 +52,7 @@ src/
 
 ### 1. Supabase
 1. Crie um projeto em https://supabase.com (região São Paulo).
-2. **SQL Editor** > cole e rode, **nesta ordem**, cada arquivo de `supabase/migrations/`: `0001_init.sql`, `0002_cardapio.sql`, `0003_vitrines.sql`, `0004_lembretes.sql`, `0005_cobranca.sql`.
+2. **SQL Editor** > cole e rode, **nesta ordem**, cada arquivo de `supabase/migrations/`: `0001_init.sql`, `0002_cardapio.sql`, `0003_vitrines.sql`, `0004_lembretes.sql`, `0005_cobranca.sql`, `0006_taxas.sql`.
 3. **Authentication > URL Configuration**:
    - *Site URL*: `https://seudominio.com.br`
    - *Redirect URLs*: `https://seudominio.com.br/**` e `http://localhost:5173/**`
@@ -116,6 +116,8 @@ Usado para: confirmação de cadastro, código de acesso do cliente e lembretes 
 O dono paga em **Painel > Assinatura** (cartão com cobrança automática todo mês, PIX ou boleto).
 O Asaas avisa o sistema, que libera o painel. Fatura vencida há mais de 5 dias bloqueia a vitrine;
 o pagamento desbloqueia sozinho. A rotina roda todo dia às 9h.
+
+A taxa do Asaas é repassada na mensalidade conforme a forma de pagamento (PIX/boleto R$ 1,99; cartão 2,99% + R$ 0,49, calculada para você receber o valor cheio). Os valores ficam na função `billing_fee` do `0006_taxas.sql`: se o Asaas mudar a tabela, atualize ali e rode o arquivo de novo.
 
 ### Ligar (primeiro no ambiente de testes)
 1. Conta de testes: https://sandbox.asaas.com. Em **Integrações > Chave de API**, gere a chave.

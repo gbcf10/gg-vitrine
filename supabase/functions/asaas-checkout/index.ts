@@ -1,7 +1,8 @@
 // GG Vitrine — Edge Function "asaas-checkout"
 //
 // Chamada pelo painel (usuário logado). Ações:
-//   checkout   → cria cliente + assinatura no Asaas e devolve o link da fatura em aberto
+//   checkout   → cria cliente + assinatura no Asaas e devolve o link da fatura em aberto.
+//                Com a assinatura ativa, só troca a forma de pagamento.
 //   cancel     → cancela a assinatura (a vitrine fica no ar até o fim do período pago)
 //   sync-price → (admin) atualiza no Asaas o valor da mensalidade depois de mudar plano/desconto
 //
@@ -18,8 +19,9 @@ const cors = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 
-const ASAAS_KEY = Deno.env.get('ASAAS_API_KEY')
-const ASAAS_URL = Deno.env.get('ASAAS_ENV') === 'production'
+// .trim(): ignora espaço ou quebra de linha colados junto com o segredo.
+const ASAAS_KEY = Deno.env.get('ASAAS_API_KEY')?.trim()
+const ASAAS_URL = Deno.env.get('ASAAS_ENV')?.trim().toLowerCase() === 'production'
   ? 'https://api.asaas.com/v3'
   : 'https://api-sandbox.asaas.com/v3'
 
@@ -36,6 +38,7 @@ async function asaas(path: string, method = 'GET', body?: unknown) {
 
 const todayBR = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
 const digits = (v: unknown) => String(v ?? '').replace(/\D/g, '')
+const BILLING_TYPE: Record<string, string> = { cartao: 'CREDIT_CARD', pix: 'PIX', boleto: 'BOLETO' }
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
@@ -50,16 +53,24 @@ Deno.serve(async (req) => {
     const { data: { user } } = await userClient.auth.getUser()
     if (!user) return json({ error: 'Sua sessão expirou. Entre novamente.' }, 401)
 
-    const { action = 'checkout', business_id, document, name } = await req.json()
+    const { action = 'checkout', business_id, document, name, method } = await req.json()
     const { data: isOwner } = await userClient.rpc('is_owner', { bid: business_id })
     const { data: isAdmin } = await userClient.rpc('is_platform_admin')
     const allowed = action === 'sync-price' ? isAdmin : isOwner || isAdmin
     if (!allowed) return json({ error: 'Sem permissão.' }, 403)
 
+    // Forma de pagamento escolhida (define a taxa repassada na mensalidade).
+    if (action === 'checkout') {
+      if (!BILLING_TYPE[method]) return json({ error: 'Escolha cartão, PIX ou boleto.' }, 400)
+      await admin.from('subscriptions').update({ billing_method: method }).eq('business_id', business_id)
+    }
+
     const { data: sub } = await admin.from('subscriptions')
-      .select('*, effective_price, plan:plans(name), business:businesses(name, phone)')
+      .select('*, effective_price, charge_value, plan:plans(name), business:businesses(name, phone)')
       .eq('business_id', business_id).maybeSingle()
     if (!sub) return json({ error: 'Escolha um plano primeiro.' }, 400)
+    const value = Number(sub.charge_value)                    // plano + taxa do meio de pagamento
+    const billingType = BILLING_TYPE[sub.billing_method ?? 'pix']
 
     // ---- Cancelar ----
     if (action === 'cancel') {
@@ -76,13 +87,19 @@ Deno.serve(async (req) => {
     if (action === 'sync-price') {
       if (!sub.gateway_subscription_id || sub.status === 'canceled') return json({ ok: true, skipped: true })
       await asaas(`/subscriptions/${sub.gateway_subscription_id}`, 'POST', {
-        value: Number(sub.effective_price), updatePendingPayments: true,
+        value, updatePendingPayments: true,
       })
       return json({ ok: true })
     }
 
     // ---- Checkout ----
-    if (sub.status === 'active') return json({ error: 'Sua assinatura já está em dia.' }, 400)
+    // Assinatura em dia: só troca a forma de pagamento (vale a partir da próxima fatura).
+    if (sub.status === 'active') {
+      if (sub.gateway_subscription_id) {
+        await asaas(`/subscriptions/${sub.gateway_subscription_id}`, 'POST', { billingType, value, updatePendingPayments: true })
+      }
+      return json({ ok: true, updated: true })
+    }
 
     let customerId = sub.gateway_customer_id
     const doc = digits(document) || sub.billing_document || ''
@@ -99,11 +116,14 @@ Deno.serve(async (req) => {
     }
 
     let subId = sub.status === 'canceled' ? null : sub.gateway_subscription_id
-    if (!subId) {
+    if (subId) {
+      // Já existe: garante forma de pagamento e valor atualizados na fatura em aberto.
+      await asaas(`/subscriptions/${subId}`, 'POST', { billingType, value, updatePendingPayments: true })
+    } else {
       const created = await asaas('/subscriptions', 'POST', {
         customer: customerId,
-        billingType: 'UNDEFINED',              // o cliente escolhe: cartão, PIX ou boleto
-        value: Number(sub.effective_price),
+        billingType,                            // cartão (cobrança automática), PIX ou boleto
+        value,
         nextDueDate: todayBR(),
         cycle: 'MONTHLY',
         description: `GG Vitrine: plano ${sub.plan.name} (${sub.business.name})`,
