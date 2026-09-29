@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { supabase } from '@/lib/supabase'
 import { slugify } from '@/lib/format'
 import AppLogo from '@/components/AppLogo.vue'
+import BackButton from '@/components/BackButton.vue'
 import { APP_DOMAIN, KINDS, CATEGORIES_BY_KIND } from '@/config/brand'
 import Icon from '@/components/Icon.vue'
 
@@ -64,6 +65,7 @@ async function submit() {
 
 <template>
   <div class="narrow" style="width: min(640px, calc(100% - 32px))">
+    <BackButton label="Voltar ao início" />
     <div class="auth-logo"><AppLogo /></div>
 
     <div v-if="done" class="card glow">

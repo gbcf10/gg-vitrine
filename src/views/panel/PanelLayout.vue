@@ -10,6 +10,7 @@ import { waLink } from '@/lib/whatsapp'
 import { brandVars } from '@/lib/colors'
 import AppLogo from '@/components/AppLogo.vue'
 import Icon from '@/components/Icon.vue'
+import BackButton from '@/components/BackButton.vue'
 import { navFor, homeFor, routeAllowed } from '@/lib/panel-nav'
 
 const route = useRoute()
@@ -36,6 +37,8 @@ const nav = computed(() => navFor(biz.business?.kind ?? 'agenda').map((item) => 
     ? `${biz.business.staff_label}s` : item.label,
   locked: item.feature && !biz.hasFeature(item.feature),
 })))
+
+const panelHome = computed(() => homeFor(biz.business?.kind ?? 'agenda'))
 
 const FREE_WHEN_INACTIVE = ['/painel/assinatura', '/painel/perfil']
 
@@ -177,6 +180,7 @@ async function requestBusiness() {
       <div class="footer">{{ APP_NAME }} · G&amp;G Soluções</div>
     </aside>
     <main class="main">
+      <BackButton v-if="route.path !== panelHome" :fallback="panelHome" />
       <RouterView />
     </main>
   </div>

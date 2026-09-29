@@ -1,5 +1,6 @@
 <script setup>
 import AppLogo from '@/components/AppLogo.vue'
+import BackButton from '@/components/BackButton.vue'
 import { LEGAL } from '@/config/brand'
 
 defineProps({ title: { type: String, required: true } })
@@ -16,6 +17,7 @@ defineProps({ title: { type: String, required: true } })
     </div>
   </nav>
   <main class="container legal">
+    <BackButton />
     <p class="eyebrow">Documentos</p>
     <h1 class="gradient-text">{{ title }}</h1>
     <p class="muted">Última atualização: {{ LEGAL.updatedAt }}</p>

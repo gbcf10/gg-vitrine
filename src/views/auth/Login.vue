@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '@/lib/supabase'
 import AppLogo from '@/components/AppLogo.vue'
+import BackButton from '@/components/BackButton.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -40,6 +41,7 @@ async function forgot() {
 
 <template>
   <div class="narrow">
+    <BackButton label="Voltar ao início" />
     <div class="auth-logo"><AppLogo /></div>
     <form class="card glow" @submit.prevent="submit">
       <h3>Entrar no painel</h3>
