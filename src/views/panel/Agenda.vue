@@ -15,6 +15,7 @@ const services = ref([])
 const customers = ref([])
 const error = ref('')
 const showForm = ref(false)
+const setup = ref(null)   // pendências de configuração que impedem o agendamento online
 
 // Lembrete manual pelo WhatsApp (o automático vem com a integração paga).
 function reminder(a) {
@@ -48,7 +49,27 @@ async function loadLists() {
   customers.value = unwrap(await supabase.from('customers').select('id, name, phone').eq('business_id', bid).order('name'))
 }
 
-onMounted(() => { loadAppointments(); loadLists() })
+// Confere se a vitrine já consegue mostrar horários: serviço, quem atende
+// ligado ao serviço e horário de atendimento.
+async function checkSetup() {
+  const bid = biz.business.id
+  const [{ data: svc }, { data: pros }, { data: hours }] = await Promise.all([
+    supabase.from('services').select('id').eq('business_id', bid).eq('active', true),
+    supabase.from('professionals').select('id, name, professional_services(service_id)').eq('business_id', bid).eq('active', true),
+    supabase.from('working_hours').select('professional_id').eq('business_id', bid),
+  ])
+  const withHours = new Set((hours ?? []).map((h) => h.professional_id))
+  const label = biz.business.staff_label.toLowerCase()
+  const steps = [
+    { done: (svc ?? []).length > 0, text: 'Cadastre pelo menos um serviço', to: '/painel/servicos' },
+    { done: (pros ?? []).length > 0, text: `Cadastre pelo menos um(a) ${label}`, to: '/painel/profissionais' },
+    { done: (pros ?? []).some((p) => p.professional_services.length), text: `Marque quais serviços cada ${label} faz`, to: '/painel/profissionais' },
+    { done: (pros ?? []).some((p) => withHours.has(p.id)), text: 'Defina os dias e horários de atendimento', to: '/painel/horarios' },
+  ]
+  setup.value = steps.every((st) => st.done) ? null : steps
+}
+
+onMounted(() => { loadAppointments(); loadLists(); checkSetup() })
 watch(date, loadAppointments)
 
 async function setStatus(a, status) {
@@ -109,6 +130,14 @@ async function createAppointment() {
       <option value="">Todos</option>
       <option v-for="p in professionals" :key="p.id" :value="p.id">{{ p.name }}</option>
     </select>
+  </div>
+
+  <div v-if="setup" class="card glow setup">
+    <h3>Falta pouco para seus clientes agendarem pelo link</h3>
+    <p class="muted" style="font-size: 0.9rem">Enquanto estes passos não estiverem prontos, a sua vitrine não mostra horários livres.</p>
+    <RouterLink v-for="(st, i) in setup" :key="i" :to="st.to" class="setup-step" :class="{ done: st.done }">
+      <span class="check">{{ st.done ? '✓' : i + 1 }}</span>{{ st.text }}
+    </RouterLink>
   </div>
 
   <div v-if="error" class="error">{{ error }}</div>
@@ -176,3 +205,11 @@ async function createAppointment() {
     </table>
   </div>
 </template>
+
+<style scoped>
+.setup-step { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--border); color: var(--text); }
+.setup-step:hover { color: var(--brand-ink); }
+.setup-step.done { color: var(--muted); text-decoration: line-through; }
+.check { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 0.8rem; font-weight: 800; flex-shrink: 0; background: var(--brand-soft); color: var(--brand-ink); border: 1px solid var(--border); }
+.setup-step.done .check { background: var(--success-soft); color: var(--success); }
+</style>

@@ -8,7 +8,7 @@ import { APP_DOMAIN, KINDS, CATEGORIES_BY_KIND } from '@/config/brand'
 import Icon from '@/components/Icon.vue'
 
 const router = useRouter()
-const form = ref({ kind: 'agenda', name: '', slug: '', category: CATEGORIES_BY_KIND.agenda[0], phone: '', ownerName: '', email: '', password: '' })
+const form = ref({ kind: 'agenda', name: '', slug: '', category: CATEGORIES_BY_KIND.agenda[0], phone: '', ownerName: '', email: '', password: '', accepted: false })
 const categories = computed(() => CATEGORIES_BY_KIND[form.value.kind])
 
 watch(() => form.value.kind, (kind) => { form.value.category = CATEGORIES_BY_KIND[kind][0] })
@@ -47,6 +47,7 @@ async function submit() {
           business_slug: slug,
           business_category: form.value.category,
           business_phone: form.value.phone,
+          terms_accepted_at: new Date().toISOString(),
         },
       },
     })
@@ -128,7 +129,13 @@ async function submit() {
         <small>Mínimo de 8 caracteres.</small>
       </div>
 
-      <button class="btn block" :disabled="loading">{{ loading ? 'Enviando...' : 'Solicitar cadastro' }}</button>
+      <label class="accept">
+        <input v-model="form.accepted" type="checkbox" required />
+        <span>Li e aceito os <RouterLink to="/termos" target="_blank">Termos de uso</RouterLink> e a
+          <RouterLink to="/privacidade" target="_blank">Política de privacidade</RouterLink>.</span>
+      </label>
+
+      <button class="btn block" :disabled="loading || !form.accepted">{{ loading ? 'Enviando...' : 'Solicitar cadastro' }}</button>
       <p class="muted" style="margin-top: 12px; font-size: 0.875rem">
         Já tem conta? <RouterLink to="/entrar">Entrar</RouterLink>
       </p>
@@ -150,4 +157,6 @@ async function submit() {
 .kind-option.selected { border-color: var(--brand); background: var(--brand-soft); box-shadow: 0 0 18px var(--brand-soft); }
 .kind-option.selected svg { color: var(--brand-ink); }
 @media (max-width: 480px) { .kind-grid { grid-template-columns: 1fr; } }
+.accept { display: flex !important; gap: 10px; align-items: flex-start; margin: 4px 0 16px; font-weight: 400; color: var(--silver); line-height: 1.5; }
+.accept input { margin-top: 4px; }
 </style>

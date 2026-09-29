@@ -8,7 +8,8 @@ const biz = useBusiness()
 const professionals = ref([])
 const services = ref([])
 const error = ref('')
-const empty = () => ({ id: null, name: '', active: true, service_ids: [] })
+// Profissional novo já vem com todos os serviços marcados (o caso mais comum).
+const empty = () => ({ id: null, name: '', phone: '', email: '', active: true, service_ids: services.value.map((s) => s.id) })
 const form = ref(empty())
 
 const label = computed(() => biz.business.staff_label || 'Profissional')
@@ -21,6 +22,7 @@ async function load() {
   const rows = unwrap(await supabase.from('professionals')
     .select('*, professional_services(service_id)').eq('business_id', bid).order('name'))
   professionals.value = rows.map((p) => ({ ...p, service_ids: p.professional_services.map((x) => x.service_id) }))
+  if (!form.value.id && !form.value.name) form.value = empty()
 }
 onMounted(load)
 
@@ -28,13 +30,15 @@ async function save() {
   error.value = ''
   const bid = biz.business.id
   const { id, name, active, service_ids } = form.value
+  const phone = form.value.phone || null
+  const email = form.value.email || null
   try {
     let profId = id
     if (id) {
-      unwrap(await supabase.from('professionals').update({ name, active }).eq('id', id))
+      unwrap(await supabase.from('professionals').update({ name, active, phone, email }).eq('id', id))
     } else {
       profId = unwrap(await supabase.from('professionals')
-        .insert({ business_id: bid, name, active }).select('id').single()).id
+        .insert({ business_id: bid, name, active, phone, email }).select('id').single()).id
     }
     // Sincroniza os serviços que o profissional atende.
     unwrap(await supabase.from('professional_services').delete().eq('professional_id', profId))
@@ -42,6 +46,7 @@ async function save() {
       unwrap(await supabase.from('professional_services')
         .insert(service_ids.map((service_id) => ({ business_id: bid, professional_id: profId, service_id }))))
     }
+    saved.value = `${name} salvo.`
     form.value = empty()
   } catch (e) {
     error.value = e.message
@@ -49,8 +54,24 @@ async function save() {
   load()
 }
 
+const formEl = ref(null)
+const saved = ref('')
+
 function edit(p) {
-  form.value = { id: p.id, name: p.name, active: p.active, service_ids: [...p.service_ids] }
+  form.value = { id: p.id, name: p.name, phone: p.phone ?? '', email: p.email ?? '', active: p.active, service_ids: [...p.service_ids] }
+  formEl.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+// Liga com um clique a todos os serviços cadastrados.
+async function linkAll(p) {
+  error.value = ''
+  const bid = biz.business.id
+  const rows = services.value.filter((s) => !p.service_ids.includes(s.id))
+    .map((s) => ({ business_id: bid, professional_id: p.id, service_id: s.id }))
+  const { error: err } = await supabase.from('professional_services').insert(rows)
+  if (err) error.value = err.message
+  else saved.value = `${p.name} agora faz todos os serviços.`
+  load()
 }
 
 function serviceNames(ids) {
@@ -64,12 +85,17 @@ function serviceNames(ids) {
     <span class="muted">{{ plural(activeCount, 'ativo', 'ativos') }}{{ limit ? ` de ${limit} do seu plano` : '' }}</span>
   </div>
   <div v-if="error" class="error">{{ error }}</div>
+  <div v-if="saved" class="success">{{ saved }}</div>
 
-  <form class="card" @submit.prevent="save">
+  <form ref="formEl" class="card" :class="{ glow: form.id }" @submit.prevent="save">
     <h3>{{ form.id ? `Editar ${label.toLowerCase()}` : `Adicionar ${label.toLowerCase()}` }}</h3>
-    <div class="field"><label>Nome</label><input v-model="form.name" required /></div>
+    <div class="row">
+      <div class="field"><label>Nome</label><input v-model="form.name" required /></div>
+      <div class="field"><label>WhatsApp <small>(opcional, para lembretes)</small></label><input v-model="form.phone" type="tel" /></div>
+      <div class="field"><label>E-mail <small>(opcional, para lembretes)</small></label><input v-model="form.email" type="email" /></div>
+    </div>
     <div class="field">
-      <label>Serviços disponíveis</label>
+      <label>Serviços que faz <small>(clique para marcar ou desmarcar)</small></label>
       <p v-if="!services.length" class="muted">Cadastre os serviços primeiro.</p>
       <div class="chips">
         <label v-for="s in services" :key="s.id" class="chip" :class="{ selected: form.service_ids.includes(s.id) }">
@@ -93,7 +119,13 @@ function serviceNames(ids) {
       <tbody>
         <tr v-for="p in professionals" :key="p.id">
           <td>{{ p.name }}</td>
-          <td>{{ serviceNames(p.service_ids) }}</td>
+          <td>
+            <template v-if="!p.service_ids.length">
+              <span class="badge yellow">Nenhum serviço</span>
+              <button v-if="services.length" class="btn small" style="margin-left: 8px" @click="linkAll(p)">Ligar a todos os serviços</button>
+            </template>
+            <template v-else>{{ serviceNames(p.service_ids) }}</template>
+          </td>
           <td><span :class="['badge', p.active ? 'green' : '']">{{ p.active ? 'Ativo' : 'Inativo' }}</span></td>
           <td style="text-align: right">
             <button class="btn small secondary" @click="edit(p)">Editar</button>

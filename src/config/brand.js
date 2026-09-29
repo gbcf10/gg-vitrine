@@ -4,6 +4,16 @@ export const APP_DOMAIN = 'ggvitrine.com.br'
 export const APP_SLOGAN = 'Mostre seus serviços. Receba clientes.'
 export const SUPPORT_WHATSAPP = '' // ex.: '5511999999999'
 
+// Dados da empresa usados nos Termos de uso e na Política de privacidade.
+// Preencher antes do lançamento.
+export const LEGAL = {
+  company: 'G&G Soluções',
+  cnpj: '',                               // ex.: '00.000.000/0001-00'
+  email: 'contato@ggvitrine.com.br',
+  city: '',                               // foro, ex.: 'São Paulo/SP'
+  updatedAt: '29/09/2026',
+}
+
 // Tipos de vitrine (coluna businesses.kind). A ordem é a exibida no cadastro.
 export const KINDS = {
   agenda: {
@@ -183,7 +193,7 @@ export const FEATURE_LABELS = {
   historico_clientes: 'Histórico dos clientes',
   bloqueios: 'Bloqueio de horários',
   folgas: 'Controle de folgas',
-  lembretes: 'Lembretes pelo WhatsApp',
+  lembretes: 'Lembretes automáticos para cliente e profissional',
   relatorios_avancados: 'Relatórios avançados',
   financeiro: 'Controle financeiro e faturamento',
   dashboard: 'Dashboard completo',

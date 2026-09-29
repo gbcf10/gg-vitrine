@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { supabase, unwrap } from '@/lib/supabase'
 import { useBusiness } from '@/lib/business'
-import { money, formatDate, SUBSCRIPTION_STATUS } from '@/lib/format'
+import { money, formatDate, SUBSCRIPTION_STATUS, plural } from '@/lib/format'
 import { FEATURE_LABELS, SUPPORT_WHATSAPP } from '@/config/brand'
 
 const biz = useBusiness()
@@ -73,7 +73,7 @@ const whatsappLink = computed(() => SUPPORT_WHATSAPP &&
         <p style="font-size: 1.5rem; font-weight: 700">{{ money(plan.base_price) }}<span class="muted" style="font-size: 1rem">/mês</span></p>
         <ul style="padding-left: 18px; font-size: 0.9rem">
           <template v-if="plan.kind === 'agenda'">
-            <li>{{ plan.max_professionals ? `Até ${plan.max_professionals} profissional(is)` : 'Profissionais ilimitados' }}</li>
+            <li>{{ plan.max_professionals ? `Até ${plural(plan.max_professionals, 'profissional', 'profissionais')}` : 'Profissionais ilimitados' }}</li>
             <li>{{ plan.max_customers ? `Até ${plan.max_customers} clientes` : 'Clientes ilimitados' }}</li>
           </template>
           <li v-else-if="plan.kind === 'cardapio'">Sem comissão por pedido</li>

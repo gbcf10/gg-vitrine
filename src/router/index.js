@@ -5,6 +5,8 @@ const routes = [
   { path: '/', component: () => import('@/views/Landing.vue') },
   { path: '/entrar', component: () => import('@/views/auth/Login.vue') },
   { path: '/cadastro', component: () => import('@/views/auth/Signup.vue') },
+  { path: '/termos', component: () => import('@/views/legal/Terms.vue') },
+  { path: '/privacidade', component: () => import('@/views/legal/Privacy.vue') },
   {
     path: '/painel',
     component: () => import('@/views/panel/PanelLayout.vue'),
@@ -28,6 +30,7 @@ const routes = [
       { path: 'avaliacoes', component: () => import('@/views/panel/Reviews.vue') },
       { path: 'fidelidade', component: () => import('@/views/panel/Loyalty.vue') },
       { path: 'cupons', component: () => import('@/views/panel/Coupons.vue') },
+      { path: 'lembretes', component: () => import('@/views/panel/Reminders.vue') },
       { path: 'divulgar', component: () => import('@/views/panel/Share.vue') },
       { path: 'perfil', component: () => import('@/views/panel/Profile.vue') },
       { path: 'assinatura', component: () => import('@/views/panel/Subscription.vue') },

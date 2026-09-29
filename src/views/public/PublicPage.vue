@@ -100,6 +100,9 @@ onMounted(async () => {
       <div class="powered">
         <span class="muted">Feito com</span> <AppLogo />
       </div>
+      <p class="privacy-note">
+        Seus dados são usados só para este atendimento. <RouterLink to="/privacidade">Política de privacidade</RouterLink>
+      </p>
     </main>
   </div>
 
@@ -112,4 +115,6 @@ onMounted(async () => {
 .rating { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 0.85rem; }
 .card-head .rating { justify-content: center; }
 .narrowed { max-width: 560px; }
+.privacy-note { text-align: center; font-size: 0.75rem; color: var(--muted); margin-top: 8px; }
+.privacy-note a { color: var(--muted); text-decoration: underline; }
 </style>

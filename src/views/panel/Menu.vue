@@ -76,11 +76,13 @@ async function moveCategory(index, delta) {
 // ---- Produtos ----
 function newItem(category) {
   editing.value = { id: null, category_id: category.id, name: '', description: '', price: '', photo_url: null, available: true }
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 function editItem(i) {
   const { id, category_id, name, description, price, photo_url, available } = i
   editing.value = { id, category_id, name, description, price, photo_url, available }
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 async function saveItem() {

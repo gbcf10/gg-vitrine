@@ -20,10 +20,19 @@ async function save() {
   error.value = ''
   const { id, ...fields } = form.value
   const payload = { ...fields, business_id: biz.business.id }
-  const { error: err } = id
-    ? await supabase.from('services').update(payload).eq('id', id)
-    : await supabase.from('services').insert(payload)
-  if (err) { error.value = err.message; return }
+  if (id) {
+    const { error: err } = await supabase.from('services').update(payload).eq('id', id)
+    if (err) { error.value = err.message; return }
+  } else {
+    const { data, error: err } = await supabase.from('services').insert(payload).select('id').single()
+    if (err) { error.value = err.message; return }
+    // Serviço novo já fica disponível com todos que atendem (dá para ajustar em Profissionais).
+    const { data: pros } = await supabase.from('professionals').select('id').eq('business_id', biz.business.id).eq('active', true)
+    if (pros?.length) {
+      await supabase.from('professional_services')
+        .insert(pros.map((p) => ({ business_id: biz.business.id, professional_id: p.id, service_id: data.id })))
+    }
+  }
   form.value = empty()
   load()
 }
@@ -31,6 +40,7 @@ async function save() {
 function edit(s) {
   const { id, name, description, price, duration_min, active } = s
   form.value = { id, name, description, price, duration_min, active }
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 async function remove(s) {

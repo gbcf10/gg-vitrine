@@ -34,6 +34,7 @@ async function add() {
 
 async function open(c) {
   selected.value = { ...c }
+  window.scrollTo({ top: 0, behavior: 'smooth' })
   history.value = unwrap(await supabase.from('appointments')
     .select('id, starts_at, status, price, service:services(name), professional:professionals(name)')
     .eq('customer_id', c.id).order('starts_at', { ascending: false }).limit(50))

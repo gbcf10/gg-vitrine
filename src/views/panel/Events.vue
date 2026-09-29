@@ -49,6 +49,7 @@ function newEvent() {
 }
 function editEvent(e) {
   editing.value = { ...e, starts: toLocalInput(e.starts_at), ends: toLocalInput(e.ends_at), capacity: e.capacity ?? '' }
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 async function save() {

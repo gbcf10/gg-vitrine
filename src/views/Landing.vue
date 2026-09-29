@@ -197,9 +197,11 @@ const features = [
       <AppLogo />
       <div class="muted" style="font-size: 0.85rem; margin-top: 6px">{{ APP_SLOGAN }}</div>
     </div>
-    <span class="muted">
-      Um produto <a href="https://portfoliogegsolucoes.netlify.app/" target="_blank" rel="noopener">G&amp;G Soluções</a>
-    </span>
+    <div class="footer-links">
+      <RouterLink to="/termos">Termos de uso</RouterLink>
+      <RouterLink to="/privacidade">Privacidade</RouterLink>
+      <span class="muted">Um produto <a href="https://portfoliogegsolucoes.netlify.app/" target="_blank" rel="noopener">G&amp;G Soluções</a></span>
+    </div>
   </footer>
 </template>
 
@@ -298,6 +300,8 @@ const features = [
 
 .cta { text-align: center; padding: 48px 24px; background: linear-gradient(160deg, rgba(59, 130, 246, 0.12), rgba(11, 23, 48, 0.5)); }
 .cta h2 { font-size: clamp(1.5rem, 3vw, 2.2rem); }
+.footer-links { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; font-size: 0.9rem; }
+.footer-links a:not([target]) { color: var(--silver); }
 .footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 28px 0 40px; border-top: 1px solid var(--border); }
 
 .kind-card { display: flex; flex-direction: column; color: var(--text); }

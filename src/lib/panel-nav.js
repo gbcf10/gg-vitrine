@@ -7,6 +7,7 @@ export const PANEL_NAV = [
   { to: '/painel/horarios', label: 'Horários', icon: 'clock', kinds: ['agenda'] },
   { to: '/painel/clientes', label: 'Clientes', icon: 'contact', kinds: ['agenda'] },
   { to: '/painel/bloqueios', label: 'Folgas e bloqueios', icon: 'ban', kinds: ['agenda'] },
+  { to: '/painel/lembretes', label: 'Lembretes', icon: 'bell', kinds: ['agenda'], feature: 'lembretes' },
 
   { to: '/painel/pedidos', label: 'Pedidos', icon: 'bag', kinds: ['cardapio'] },
   { to: '/painel/cardapio', label: 'Produtos', icon: 'utensils', kinds: ['cardapio'] },
