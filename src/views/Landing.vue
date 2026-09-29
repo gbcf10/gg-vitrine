@@ -1,16 +1,21 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { supabase } from '@/lib/supabase'
 import { money } from '@/lib/format'
-import { CATEGORIES, FEATURE_LABELS, APP_DOMAIN } from '@/config/brand'
+import { CATEGORIES_BY_KIND, FEATURE_LABELS, APP_DOMAIN, APP_SLOGAN, KINDS } from '@/config/brand'
 import AppLogo from '@/components/AppLogo.vue'
 import Icon from '@/components/Icon.vue'
 
-const plans = ref([])
+const allPlans = ref([])
+const plans = computed(() => allPlans.value.filter((p) => p.kind === 'agenda'))
+const kindCards = computed(() => Object.entries(KINDS).map(([kind, k]) => {
+  const prices = allPlans.value.filter((p) => p.kind === kind).map((p) => Number(p.base_price))
+  return { kind, ...k, examples: CATEGORIES_BY_KIND[kind].slice(0, 5).join(' · '), from: prices.length ? Math.min(...prices) : null }
+}))
 
 onMounted(async () => {
   const { data } = await supabase.from('plans').select('*').order('sort_order')
-  plans.value = data ?? []
+  allPlans.value = data ?? []
 })
 
 // Mostra só o que cada plano acrescenta em relação ao anterior.
@@ -26,19 +31,26 @@ function limits(plan) {
   ]
 }
 
+const notifications = [
+  { icon: 'calendar', title: 'Novo agendamento', when: 'agora', text: 'Corte + barba · hoje às 10:00' },
+  { icon: 'bag', title: 'Novo pedido', when: '2 min', text: '2 itens · entrega · R$ 69,00' },
+  { icon: 'sparkles', title: 'Novo agendamento', when: '5 min', text: 'Manicure · amanhã às 14:30' },
+  { icon: 'bag', title: 'Novo pedido', when: '8 min', text: '1 item · retirada · R$ 32,00' },
+]
+
 const steps = [
   { icon: 'store', title: 'Cadastre seu negócio', text: 'Envie seus dados. Analisamos e aprovamos rapidinho.' },
-  { icon: 'scissors', title: 'Monte sua agenda', text: 'Serviços, preços, profissionais e horários em poucos minutos.' },
-  { icon: 'link', title: 'Compartilhe seu link', text: 'Seus clientes agendam sozinhos, 24 horas por dia.' },
+  { icon: 'scissors', title: 'Monte sua vitrine', text: 'Serviços ou cardápio, preços, fotos e horários em poucos minutos.' },
+  { icon: 'link', title: 'Compartilhe seu link', text: 'Seus clientes agendam ou pedem sozinhos, a qualquer hora.' },
 ]
 
 const features = [
   { icon: 'link', title: 'Link próprio', text: `${APP_DOMAIN}/seu-negocio com sua logo e sua cor.` },
-  { icon: 'calendar', title: 'Agenda inteligente', text: 'Sem horário duplicado: o sistema bloqueia conflitos sozinho.' },
-  { icon: 'users', title: 'Vários profissionais', text: 'Agenda individual para cada profissional da equipe.' },
-  { icon: 'smartphone', title: 'Cliente no controle', text: 'O cliente vê, cancela e remarca pelo celular, sem te ligar.' },
-  { icon: 'ban', title: 'Folgas e bloqueios', text: 'Feche um horário, um dia ou as férias com um clique.' },
-  { icon: 'chart', title: 'Relatórios', text: 'Acompanhe atendimentos, clientes e faturamento.' },
+  { icon: 'whatsapp', title: 'Tudo no WhatsApp', text: 'Pedidos, reservas e orçamentos chegam prontos no seu WhatsApp.' },
+  { icon: 'star', title: 'Avaliações', text: 'Clientes avaliam e você aprova o que aparece na vitrine.' },
+  { icon: 'gift', title: 'Cartão fidelidade', text: 'Carimbos automáticos: no 10º atendimento, o cliente ganha um prêmio.' },
+  { icon: 'tag', title: 'Cupons de desconto', text: 'Crie códigos promocionais para divulgar nas redes.' },
+  { icon: 'qr', title: 'QR Code e cartaz', text: 'Imprima e deixe no balcão, na mesa ou na vitrine da loja.' },
 ]
 </script>
 
@@ -48,6 +60,7 @@ const features = [
       <AppLogo />
       <div class="links">
         <a href="#como-funciona" class="hide-sm">Como funciona</a>
+        <a href="#vitrines" class="hide-sm">Vitrines</a>
         <a href="#planos" class="hide-sm">Planos</a>
         <RouterLink class="btn secondary small" to="/entrar">Entrar</RouterLink>
         <RouterLink class="btn small" to="/cadastro">Começar</RouterLink>
@@ -59,10 +72,11 @@ const features = [
   <header class="hero">
     <div class="container hero-grid">
       <div>
-        <p class="eyebrow">Agendamento online</p>
-        <h1 class="hero-title gradient-text">Sua agenda cheia, sem precisar parar para responder mensagem.</h1>
+        <p class="eyebrow">Sua vitrine online</p>
+        <h1 class="hero-title gradient-text">{{ APP_SLOGAN }}</h1>
         <p class="hero-sub">
-          Seu cliente escolhe o serviço, o profissional e o horário direto pelo seu link. Você só aparece para atender.
+          Crie a vitrine do seu negócio com link próprio. Seu cliente agenda um horário ou faz um pedido
+          sozinho, direto pelo celular. Você só aparece para atender.
         </p>
         <div class="row" style="gap: 12px">
           <RouterLink class="btn large shrink" to="/cadastro">Cadastrar meu negócio</RouterLink>
@@ -72,30 +86,23 @@ const features = [
 
       <div class="hero-visual" aria-hidden="true">
         <div class="hero-glow" />
-        <div class="card mock">
-          <div class="mock-head">
-            <div class="mock-avatar">BZ</div>
-            <div>
-              <strong>Barbearia do Zé</strong>
-              <div class="muted" style="font-size: 0.8rem">Barbearia</div>
+        <div class="feed">
+          <div class="link-pill">
+            <Icon name="link" />
+            <span>{{ APP_DOMAIN }}/<strong>seu-negocio</strong></span>
+          </div>
+          <div v-for="(n, i) in notifications" :key="n.title" class="card notif" :style="{ '--i': i }">
+            <div class="notif-icon"><Icon :name="n.icon" /></div>
+            <div style="flex: 1; min-width: 0">
+              <div class="notif-top"><strong>{{ n.title }}</strong><small>{{ n.when }}</small></div>
+              <div class="muted notif-text">{{ n.text }}</div>
             </div>
           </div>
-          <div class="mock-service">
-            <span>Corte + barba</span><strong>R$ 60</strong>
-          </div>
-          <div class="mock-days">
-            <span>Seg<b>14</b></span><span class="on">Ter<b>15</b></span><span>Qua<b>16</b></span><span>Qui<b>17</b></span>
-          </div>
-          <div class="chips">
-            <span class="chip">09:00</span><span class="chip">09:30</span><span class="chip selected">10:00</span>
-            <span class="chip">11:30</span><span class="chip">14:00</span><span class="chip">15:30</span>
-          </div>
-          <div class="btn block" style="margin-top: 16px">Confirmar agendamento</div>
-        </div>
-        <div class="card floating">
-          <div class="stat">
-            <div class="label">Hoje</div>
-            <div class="value gradient-text">12 agendamentos</div>
+          <div class="card floating">
+            <div class="stat">
+              <div class="label">Esta semana</div>
+              <div class="value gradient-text">+38 clientes</div>
+            </div>
           </div>
         </div>
       </div>
@@ -103,7 +110,7 @@ const features = [
   </header>
 
   <div class="tagline container">
-    <template v-for="(c, i) in CATEGORIES.slice(0, 7)" :key="c">
+    <template v-for="(c, i) in [...CATEGORIES_BY_KIND.agenda.slice(0, 4), ...CATEGORIES_BY_KIND.cardapio.slice(0, 3)]" :key="c">
       <span v-if="i" class="dot">•</span><span>{{ c }}</span>
     </template>
   </div>
@@ -111,9 +118,9 @@ const features = [
   <!-- Como funciona -->
   <section id="como-funciona" class="container section">
     <p class="eyebrow center">Como funciona</p>
-    <h2 class="section-title">Pronto para receber agendamentos em 3 passos</h2>
+    <h2 class="section-title">Sua vitrine no ar em 3 passos</h2>
     <div class="grid three">
-      <div v-for="(s, i) in steps" :key="s.title" class="card hoverable step">
+      <div v-for="(s, i) in steps" :key="s.title" class="card hoverable how-step">
         <div class="icon-box"><Icon :name="s.icon" /></div>
         <span class="step-n">0{{ i + 1 }}</span>
         <h3>{{ s.title }}</h3>
@@ -125,7 +132,7 @@ const features = [
   <!-- Recursos -->
   <section class="container section">
     <p class="eyebrow center">Recursos</p>
-    <h2 class="section-title">Tudo o que seu negócio precisa para organizar a agenda</h2>
+    <h2 class="section-title">Recursos que fazem o cliente voltar</h2>
     <div class="grid three">
       <div v-for="f in features" :key="f.title" class="card hoverable feature">
         <div class="icon-box small"><Icon :name="f.icon" /></div>
@@ -137,10 +144,26 @@ const features = [
     </div>
   </section>
 
+  <!-- Tipos de vitrine -->
+  <section id="vitrines" class="container section">
+    <p class="eyebrow center">Para cada tipo de negócio</p>
+    <h2 class="section-title">Escolha como seus clientes vão te encontrar</h2>
+    <div class="grid three">
+      <RouterLink v-for="k in kindCards" :key="k.kind" to="/cadastro" class="card hoverable kind-card">
+        <div class="icon-box small"><Icon :name="k.icon" /></div>
+        <h3 style="margin: 14px 0 6px">{{ k.label }}</h3>
+        <p class="muted" style="margin: 0 0 10px; font-size: 0.92rem">{{ k.description }}</p>
+        <small class="examples">{{ k.examples }}</small>
+        <div v-if="k.from" class="kind-price">a partir de <strong class="gradient-text">{{ money(k.from) }}</strong>/mês</div>
+      </RouterLink>
+    </div>
+  </section>
+
   <!-- Planos -->
   <section id="planos" class="container section">
     <p class="eyebrow center">Planos</p>
-    <h2 class="section-title">Escolha o plano ideal para o tamanho do seu negócio</h2>
+    <h2 class="section-title">Planos de agendamento para o tamanho do seu negócio</h2>
+    <p class="muted" style="text-align: center; margin: -20px 0 28px">As outras vitrines têm plano único, com os valores mostrados acima.</p>
     <div class="grid three">
       <div v-for="(plan, i) in plans" :key="plan.id" class="card plan" :class="{ featured: plan.id === 'profissional' }">
         <span v-if="plan.id === 'profissional'" class="badge blue plan-tag">Mais escolhido</span>
@@ -163,14 +186,17 @@ const features = [
   <!-- CTA -->
   <section class="container section">
     <div class="card cta glow">
-      <h2 class="gradient-text">Seu próximo cliente pode agendar hoje.</h2>
-      <p class="muted">Cadastre seu estabelecimento e comece a receber agendamentos pelo seu link.</p>
-      <RouterLink class="btn large" to="/cadastro">Cadastrar meu negócio</RouterLink>
+      <h2 class="gradient-text">{{ APP_SLOGAN }}</h2>
+      <p class="muted">Cadastre seu negócio e coloque sua vitrine no ar ainda hoje.</p>
+      <RouterLink class="btn large" to="/cadastro">Criar minha vitrine</RouterLink>
     </div>
   </section>
 
   <footer class="container footer">
-    <AppLogo />
+    <div>
+      <AppLogo />
+      <div class="muted" style="font-size: 0.85rem; margin-top: 6px">{{ APP_SLOGAN }}</div>
+    </div>
     <span class="muted">
       Um produto <a href="https://portfoliogegsolucoes.netlify.app/" target="_blank" rel="noopener">G&amp;G Soluções</a>
     </span>
@@ -206,7 +232,31 @@ const features = [
 .mock-days span b { display: block; color: var(--text); font-size: 1rem; }
 .mock-days span.on { background: linear-gradient(120deg, var(--brand), var(--brand-strong)); border-color: transparent; color: #dbeafe; }
 .mock .chip { font-size: 0.82rem; padding: 7px 11px; }
-.floating { position: absolute; right: -18px; top: 8px; padding: 14px 18px; animation: float 5s ease-in-out infinite; background: rgba(11, 23, 48, 0.85); }
+.feed { position: relative; width: 100%; max-width: 360px; display: grid; gap: 12px; }
+.link-pill {
+  display: flex; align-items: center; gap: 10px; justify-self: start; padding: 10px 16px; border-radius: 999px;
+  background: rgba(11, 23, 48, 0.85); border: 1px solid rgba(59, 130, 246, 0.45); box-shadow: 0 0 24px rgba(59, 130, 246, 0.25);
+  font-size: 0.9rem; color: var(--silver);
+}
+.link-pill svg { width: 18px; height: 18px; color: var(--brand-ink); }
+.link-pill strong { color: #fff; }
+.notif {
+  display: flex; gap: 12px; align-items: center; padding: 14px 16px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.07), rgba(11, 23, 48, 0.65));
+  box-shadow: var(--shadow); margin-left: calc(var(--i) * 14px);
+  opacity: calc(1 - var(--i) * 0.17);
+  animation: rise 0.6s ease both; animation-delay: calc(var(--i) * 0.15s);
+}
+.notif-icon {
+  width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; flex-shrink: 0;
+  background: linear-gradient(140deg, var(--brand), var(--brand-strong)); color: #fff; box-shadow: 0 0 16px var(--brand-glow);
+}
+.notif-icon svg { width: 20px; height: 20px; }
+.notif-top { display: flex; justify-content: space-between; gap: 10px; }
+.notif-top small { white-space: nowrap; }
+.notif-text { font-size: 0.86rem; }
+@keyframes rise { from { opacity: 0; transform: translateY(12px); } }
+.floating { position: absolute; right: -28px; bottom: -34px; padding: 14px 18px; animation: float 5s ease-in-out infinite; background: rgba(11, 23, 48, 0.85); }
 .floating .value { font-size: 1.2rem; }
 @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
@@ -228,7 +278,7 @@ const features = [
 .icon-box.small { width: 46px; height: 46px; border-radius: 13px; margin: 0; flex-shrink: 0; }
 .icon-box.small svg { width: 22px; height: 22px; }
 .card:hover .icon-box { color: #fff; border-color: var(--brand); }
-.step { position: relative; }
+.how-step { position: relative; }
 .step-n { position: absolute; top: 20px; right: 22px; font-size: 2rem; font-weight: 800; color: rgba(148, 180, 220, 0.14); }
 .feature { display: flex; gap: 16px; align-items: flex-start; }
 
@@ -249,6 +299,12 @@ const features = [
 .cta { text-align: center; padding: 48px 24px; background: linear-gradient(160deg, rgba(59, 130, 246, 0.12), rgba(11, 23, 48, 0.5)); }
 .cta h2 { font-size: clamp(1.5rem, 3vw, 2.2rem); }
 .footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 28px 0 40px; border-top: 1px solid var(--border); }
+
+.kind-card { display: flex; flex-direction: column; color: var(--text); }
+.kind-card:hover { color: var(--text); }
+.examples { color: var(--silver); font-size: 0.8rem; line-height: 1.5; }
+.kind-price { margin-top: auto; padding-top: 14px; color: var(--muted); font-size: 0.9rem; }
+.kind-price strong { font-size: 1.3rem; }
 
 @media (max-width: 900px) {
   .hero-grid { grid-template-columns: 1fr; padding: 40px 0 48px; }

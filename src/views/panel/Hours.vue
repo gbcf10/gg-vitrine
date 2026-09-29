@@ -69,11 +69,11 @@ function copyToAll(day) {
 
 <template>
   <div class="page-header"><h1>Horários de atendimento</h1></div>
-  <p v-if="!professionals.length" class="notice">Cadastre um profissional para configurar os horários.</p>
+  <p v-if="!professionals.length" class="notice">Cadastre primeiro em "{{ biz.business.staff_label }}" para configurar os horários.</p>
 
   <template v-else>
     <div class="field" style="max-width: 320px">
-      <label>Profissional</label>
+      <label>{{ biz.business.staff_label }}</label>
       <select v-model="selected">
         <option v-for="p in professionals" :key="p.id" :value="p.id">{{ p.name }}</option>
       </select>

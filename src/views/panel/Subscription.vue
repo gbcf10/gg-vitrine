@@ -14,7 +14,7 @@ const canChoose = computed(() => !sub.value || ['pending_payment', 'canceled'].i
 const hasDiscount = computed(() => sub.value && Number(sub.value.effective_price) !== Number(sub.value.plan.base_price))
 
 onMounted(async () => {
-  plans.value = unwrap(await supabase.from('plans').select('*').order('sort_order'))
+  plans.value = unwrap(await supabase.from('plans').select('*').eq('kind', biz.business.kind).order('sort_order'))
   if (sub.value) {
     payments.value = unwrap(await supabase.from('payments').select('*')
       .eq('business_id', biz.business.id).order('created_at', { ascending: false }).limit(12))
@@ -72,8 +72,11 @@ const whatsappLink = computed(() => SUPPORT_WHATSAPP &&
         <h3>{{ plan.name }}</h3>
         <p style="font-size: 1.5rem; font-weight: 700">{{ money(plan.base_price) }}<span class="muted" style="font-size: 1rem">/mês</span></p>
         <ul style="padding-left: 18px; font-size: 0.9rem">
-          <li>{{ plan.max_professionals ? `Até ${plan.max_professionals} profissional(is)` : 'Profissionais ilimitados' }}</li>
-          <li>{{ plan.max_customers ? `Até ${plan.max_customers} clientes` : 'Clientes ilimitados' }}</li>
+          <template v-if="plan.kind === 'agenda'">
+            <li>{{ plan.max_professionals ? `Até ${plan.max_professionals} profissional(is)` : 'Profissionais ilimitados' }}</li>
+            <li>{{ plan.max_customers ? `Até ${plan.max_customers} clientes` : 'Clientes ilimitados' }}</li>
+          </template>
+          <li v-else-if="plan.kind === 'cardapio'">Sem comissão por pedido</li>
           <li v-for="f in plan.features" :key="f">{{ FEATURE_LABELS[f] ?? f }}</li>
         </ul>
         <button class="btn block" :disabled="sub?.plan_id === plan.id" @click="choose(plan)">

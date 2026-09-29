@@ -1,6 +1,17 @@
-# GG Agendaí
+# GG Vitrine
 
-Plataforma de agendamento online multiempresa (barbearias, salões, estética, etc.) com assinatura mensal.
+Plataforma multiempresa com assinatura mensal. Cada negócio ganha uma **vitrine** com link próprio (`ggvitrine.com.br/nome-do-negocio`), com um destes tipos:
+
+| Tipo | Para quem | O cliente... |
+|---|---|---|
+| **Agendamento** | Barbearia, clínica, quadra, aulas, pet... | marca horário |
+| **Catálogo e pedidos** | Lanchonete, doces, loja, açaí... | monta o pedido (chega no WhatsApp e fica salvo no painel) |
+| **Orçamentos** | Eletricista, pintor, montador... | pede orçamento |
+| **Reservas** | Restaurante (mesa), chalé (diárias), aluguel | pede reserva, que o dono confirma |
+| **Eventos e turmas** | Workshops, cursos, aulas coletivas | se inscreve (com limite de vagas) |
+| **Cartão digital** | Autônomos em geral | vê contatos, redes, fotos e avaliações |
+
+Extras (conforme o plano): links, galeria, avaliações moderadas, cartão fidelidade, cupons, QR Code/cartaz e lembrete pelo WhatsApp.
 
 - **Frontend:** Vue 3 + Vite (site estático, hospedado na Hostnet)
 - **Backend:** Supabase (PostgreSQL + Auth + Storage). As regras de negócio ficam no banco (RLS + funções RPC).
@@ -8,7 +19,7 @@ Plataforma de agendamento online multiempresa (barbearias, salões, estética, e
 ## Estrutura
 
 ```
-supabase/migrations/0001_init.sql   Esquema completo: tabelas, RLS, planos, funções de agendamento e admin
+supabase/migrations/                 Banco: rodar os arquivos em ordem (0001, 0002, 0003...)
 public/.htaccess                     Regras do Apache (Hostnet) para as rotas do Vue funcionarem
 src/
   config/brand.js                    Nome da plataforma, domínio, segmentos, nomes dos recursos
@@ -18,7 +29,8 @@ src/
     auth/                            Login e cadastro de estabelecimento
     panel/                           Painel do estabelecimento (/painel)
     admin/                           Painel da plataforma (/admin)
-    public/BookingPage.vue           Página de agendamento do cliente (/nome-do-negocio)
+    public/PublicPage.vue            Vitrine pública (/nome-do-negocio)
+  components/public/                 Blocos de cada tipo de vitrine e extras (galeria, avaliações...)
 ```
 
 ## Como funciona o fluxo
@@ -38,7 +50,7 @@ src/
 
 ### 1. Supabase
 1. Crie um projeto em https://supabase.com (região São Paulo).
-2. **SQL Editor** > cole todo o conteúdo de `supabase/migrations/0001_init.sql` > **Run**.
+2. **SQL Editor** > cole e rode, **nesta ordem**, cada arquivo de `supabase/migrations/`: `0001_init.sql`, `0002_cardapio.sql`, `0003_vitrines.sql`.
 3. **Authentication > URL Configuration**:
    - *Site URL*: `https://seudominio.com.br`
    - *Redirect URLs*: `https://seudominio.com.br/**` e `http://localhost:5173/**`
@@ -79,13 +91,19 @@ Definidos na tabela `plans` (dá para alterar direto no Supabase, sem mexer no c
 | Básico | R$ 50 | 1 | 300 |
 | Profissional | R$ 80 | 5 | ilimitado |
 | Premium | R$ 120 | ilimitado | ilimitado |
+| Catálogo e pedidos | R$ 60 | — | ilimitado |
+| Reservas | R$ 60 | — | — |
+| Eventos e turmas | R$ 50 | — | — |
+| Orçamentos | R$ 40 | — | — |
+| Cartão digital | R$ 25 | — | — |
 
 Os limites são aplicados pelo banco, não só pela tela.
 
 ## Próximos passos
 
 - [ ] Integração com gateway de pagamento (Asaas sugerido): Edge Function para criar a assinatura + webhook que ativa/marca atraso automaticamente
-- [ ] Lembretes de agendamento (e-mail; depois WhatsApp)
+- [ ] Lembretes automáticos (hoje o lembrete é um botão que abre o WhatsApp com a mensagem pronta)
+- [ ] Pagamento online / sinal com split (porcentagem da plataforma)
 - [ ] Relatórios (Profissional) e financeiro/dashboard (Premium)
 - [ ] Acesso de funcionários ao painel (tabela `business_members` já suporta `staff`)
 - [ ] Termos de uso e política de privacidade (LGPD)

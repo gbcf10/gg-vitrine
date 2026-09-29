@@ -1,13 +1,17 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '@/lib/supabase'
 import { slugify } from '@/lib/format'
 import AppLogo from '@/components/AppLogo.vue'
-import { APP_NAME, APP_DOMAIN, CATEGORIES } from '@/config/brand'
+import { APP_DOMAIN, KINDS, CATEGORIES_BY_KIND } from '@/config/brand'
+import Icon from '@/components/Icon.vue'
 
 const router = useRouter()
-const form = ref({ name: '', slug: '', category: CATEGORIES[0], phone: '', ownerName: '', email: '', password: '' })
+const form = ref({ kind: 'agenda', name: '', slug: '', category: CATEGORIES_BY_KIND.agenda[0], phone: '', ownerName: '', email: '', password: '' })
+const categories = computed(() => CATEGORIES_BY_KIND[form.value.kind])
+
+watch(() => form.value.kind, (kind) => { form.value.category = CATEGORIES_BY_KIND[kind][0] })
 const slugTouched = ref(false)
 const error = ref('')
 const done = ref(false)
@@ -38,6 +42,7 @@ async function submit() {
         emailRedirectTo: `${location.origin}/painel`,
         data: {
           full_name: form.value.ownerName,
+          business_kind: form.value.kind,
           business_name: form.value.name,
           business_slug: slug,
           business_category: form.value.category,
@@ -57,7 +62,7 @@ async function submit() {
 </script>
 
 <template>
-  <div class="narrow" style="max-width: 520px">
+  <div class="narrow" style="width: min(640px, calc(100% - 32px))">
     <div class="auth-logo"><AppLogo /></div>
 
     <div v-if="done" class="card glow">
@@ -74,11 +79,23 @@ async function submit() {
       <div v-if="error" class="error">{{ error }}</div>
 
       <div class="field">
+        <label>Como seus clientes vão usar sua vitrine?</label>
+        <div class="kind-grid">
+          <button v-for="(k, key) in KINDS" :key="key" type="button" class="kind-option"
+                  :class="{ selected: form.kind === key }" @click="form.kind = key">
+            <Icon :name="k.icon" />
+            <strong>{{ k.label }}</strong>
+            <small>{{ k.description }}</small>
+          </button>
+        </div>
+      </div>
+
+      <div class="field">
         <label for="bname">Nome do estabelecimento</label>
         <input id="bname" v-model="form.name" required minlength="2" maxlength="80" />
       </div>
       <div class="field">
-        <label for="slug">Seu link de agendamento</label>
+        <label for="slug">Seu link</label>
         <input id="slug" v-model="form.slug" required @input="slugTouched = true" />
         <small>{{ APP_DOMAIN }}/<strong>{{ form.slug || 'seu-negocio' }}</strong></small>
       </div>
@@ -86,7 +103,7 @@ async function submit() {
         <div class="field">
           <label for="cat">Segmento</label>
           <select id="cat" v-model="form.category">
-            <option v-for="c in CATEGORIES" :key="c">{{ c }}</option>
+            <option v-for="c in categories" :key="c">{{ c }}</option>
           </select>
         </div>
         <div class="field">
@@ -118,3 +135,19 @@ async function submit() {
     </form>
   </div>
 </template>
+
+<style scoped>
+.kind-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.kind-option {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left;
+  padding: 14px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); font: inherit; cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+.kind-option svg { width: 24px; height: 24px; color: var(--silver); margin-bottom: 4px; }
+.kind-option small { font-size: 0.78rem; line-height: 1.35; }
+.kind-option:hover { border-color: var(--brand); }
+.kind-option.selected { border-color: var(--brand); background: var(--brand-soft); box-shadow: 0 0 18px var(--brand-soft); }
+.kind-option.selected svg { color: var(--brand-ink); }
+@media (max-width: 480px) { .kind-grid { grid-template-columns: 1fr; } }
+</style>

@@ -1,5 +1,5 @@
 -- =====================================================================
--- GG Agendaí — esquema inicial (multiempresa)
+-- GG Vitrine — esquema inicial (multiempresa)
 --
 -- Como aplicar: Supabase > SQL Editor > cole este arquivo inteiro > Run.
 --

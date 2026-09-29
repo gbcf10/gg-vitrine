@@ -5,10 +5,11 @@ import { supabase } from '@/lib/supabase'
 import { signOut, isPlatformAdmin } from '@/lib/session'
 import { createBusinessContext, provideKey } from '@/lib/business'
 import { slugify } from '@/lib/format'
-import { APP_NAME, APP_DOMAIN, CATEGORIES } from '@/config/brand'
+import { APP_NAME, APP_DOMAIN, KINDS, CATEGORIES_BY_KIND } from '@/config/brand'
 import { brandVars } from '@/lib/colors'
 import AppLogo from '@/components/AppLogo.vue'
 import Icon from '@/components/Icon.vue'
+import { navFor, homeFor, routeAllowed } from '@/lib/panel-nav'
 
 const route = useRoute()
 const router = useRouter()
@@ -26,23 +27,24 @@ async function copyLink() {
   setTimeout(() => { copied.value = false }, 2000)
 }
 
-const nav = [
-  { to: '/painel', label: 'Agenda', icon: 'calendar' },
-  { to: '/painel/servicos', label: 'Serviços', icon: 'scissors' },
-  { to: '/painel/profissionais', label: 'Profissionais', icon: 'users' },
-  { to: '/painel/horarios', label: 'Horários', icon: 'clock' },
-  { to: '/painel/clientes', label: 'Clientes', icon: 'contact' },
-  { to: '/painel/bloqueios', label: 'Folgas e bloqueios', icon: 'ban' },
-  { to: '/painel/perfil', label: 'Perfil', icon: 'store' },
-  { to: '/painel/assinatura', label: 'Assinatura', icon: 'card' },
-]
+const nav = computed(() => navFor(biz.business?.kind ?? 'agenda').map((item) => ({
+  ...item,
+  label: item.staffLabel && biz.business?.staff_label && biz.business.staff_label !== 'Profissional'
+    ? `${biz.business.staff_label}s` : item.label,
+  locked: item.feature && !biz.hasFeature(item.feature),
+})))
 
-// Aprovado mas sem assinatura ativa: só a tela de assinatura e o perfil ficam liberados.
+const FREE_WHEN_INACTIVE = ['/painel/assinatura', '/painel/perfil']
+
 function enforceAccess() {
   if (biz.loading || !biz.business || biz.business.status !== 'approved') return
-  if (!biz.live && !['/painel/assinatura', '/painel/perfil'].includes(route.path)) {
+  const kind = biz.business.kind
+  // Aprovado mas sem assinatura ativa: só a tela de assinatura e o perfil ficam liberados.
+  if (!biz.live && !FREE_WHEN_INACTIVE.includes(route.path)) {
     router.replace('/painel/assinatura')
+    return
   }
+  if (!routeAllowed(route.path, kind)) router.replace(homeFor(kind))
 }
 watch(() => [route.path, biz.loading], enforceAccess)
 
@@ -58,14 +60,15 @@ async function logout() {
 }
 
 // Cadastro pelo painel, para quem criou a conta sem os dados do estabelecimento.
-const form = ref({ name: '', slug: '', category: CATEGORIES[0], phone: '' })
+const form = ref({ kind: 'agenda', name: '', slug: '', category: CATEGORIES_BY_KIND.agenda[0], phone: '' })
+watch(() => form.value.kind, (k) => { form.value.category = CATEGORIES_BY_KIND[k][0] })
 const formError = ref('')
 watch(() => form.value.name, (n) => { form.value.slug = slugify(n) })
 async function requestBusiness() {
   formError.value = ''
   const { error } = await supabase.rpc('request_business', {
     p_name: form.value.name, p_slug: slugify(form.value.slug),
-    p_category: form.value.category, p_phone: form.value.phone,
+    p_category: form.value.category, p_phone: form.value.phone, p_kind: form.value.kind,
   })
   if (error) formError.value = error.message
   else await biz.reload()
@@ -82,18 +85,24 @@ async function requestBusiness() {
       <h3>Cadastre seu estabelecimento</h3>
       <div v-if="formError" class="error">{{ formError }}</div>
       <div class="field">
+        <label>Tipo</label>
+        <select v-model="form.kind">
+          <option v-for="(k, key) in KINDS" :key="key" :value="key">{{ k.label }}</option>
+        </select>
+      </div>
+      <div class="field">
         <label>Nome do estabelecimento</label>
         <input v-model="form.name" required />
       </div>
       <div class="field">
-        <label>Link de agendamento</label>
+        <label>Seu link</label>
         <input v-model="form.slug" required />
         <small>{{ APP_DOMAIN }}/<strong>{{ form.slug || 'seu-negocio' }}</strong></small>
       </div>
       <div class="row">
         <div class="field">
           <label>Segmento</label>
-          <select v-model="form.category"><option v-for="c in CATEGORIES" :key="c">{{ c }}</option></select>
+          <select v-model="form.category"><option v-for="c in CATEGORIES_BY_KIND[form.kind]" :key="c">{{ c }}</option></select>
         </div>
         <div class="field">
           <label>WhatsApp</label>
@@ -144,14 +153,15 @@ async function requestBusiness() {
       </div>
       <nav>
         <RouterLink v-for="item in nav" :key="item.to" :to="item.to"
-                    :class="{ disabled: !biz.live && !['/painel/assinatura', '/painel/perfil'].includes(item.to) }">
+                    :class="{ disabled: !biz.live && !FREE_WHEN_INACTIVE.includes(item.to), locked: item.locked }">
           <Icon :name="item.icon" />{{ item.label }}
+          <span v-if="item.locked" class="lock-tag">PRO</span>
         </RouterLink>
         <RouterLink v-if="isAdmin" to="/admin"><Icon name="shield" />Admin da plataforma</RouterLink>
         <a href="#" @click.prevent="logout"><Icon name="logout" />Sair</a>
       </nav>
       <div v-if="biz.live" class="share">
-        <div style="font-weight: 600; margin-bottom: 4px">Seu link de agendamento</div>
+        <div style="font-weight: 600; margin-bottom: 4px">Link da sua vitrine</div>
         <a :href="publicLink" target="_blank">{{ publicLink }}</a>
         <button class="btn small block" style="margin-top: 10px" @click="copyLink">
           <Icon name="link" style="width: 15px; height: 15px" />{{ copied ? 'Copiado!' : 'Copiar link' }}
@@ -164,3 +174,8 @@ async function requestBusiness() {
     </main>
   </div>
 </template>
+
+<style scoped>
+.sidebar nav a.locked { opacity: 0.6; }
+.lock-tag { margin-left: auto; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.06em; padding: 2px 6px; border-radius: 6px; background: var(--brand-soft); color: var(--brand-ink); border: 1px solid var(--border); }
+</style>

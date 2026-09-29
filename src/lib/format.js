@@ -72,3 +72,8 @@ export const SUBSCRIPTION_STATUS = {
   past_due: 'Pagamento atrasado',
   canceled: 'Cancelada',
 }
+
+// plural(3, 'vaga', 'vagas') -> '3 vagas'
+export function plural(n, singular, pluralForm) {
+  return `${n} ${Number(n) === 1 ? singular : pluralForm}`
+}

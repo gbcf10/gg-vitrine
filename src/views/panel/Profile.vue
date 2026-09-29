@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { supabase } from '@/lib/supabase'
 import { useBusiness } from '@/lib/business'
-import { CATEGORIES, APP_DOMAIN } from '@/config/brand'
+import { CATEGORIES_BY_KIND, APP_DOMAIN, STAFF_LABELS, KINDS } from '@/config/brand'
 import { brandVars } from '@/lib/colors'
 
 const biz = useBusiness()
@@ -17,7 +17,7 @@ onMounted(() => {
   form.value = {
     name: b.name, category: b.category, description: b.description, phone: b.phone,
     address: b.address, primary_color: b.primary_color, logo_url: b.logo_url,
-    slot_interval_min: b.slot_interval_min,
+    slot_interval_min: b.slot_interval_min, staff_label: b.staff_label,
   }
 })
 
@@ -62,7 +62,7 @@ async function changePassword() {
       <div class="field"><label>Nome</label><input v-model="form.name" required /></div>
       <div class="field">
         <label>Segmento</label>
-        <select v-model="form.category"><option v-for="c in CATEGORIES" :key="c">{{ c }}</option></select>
+        <select v-model="form.category"><option v-for="c in CATEGORIES_BY_KIND[biz.business.kind]" :key="c">{{ c }}</option></select>
       </div>
     </div>
     <div class="field"><label>Descrição</label><textarea v-model="form.description" rows="3" /></div>
@@ -85,7 +85,12 @@ async function changePassword() {
         <label>Cor principal</label>
         <input v-model="form.primary_color" type="color" />
       </div>
-      <div class="field" style="max-width: 200px">
+      <div v-if="biz.business.kind === 'agenda'" class="field" style="max-width: 200px">
+        <label>Quem atende <small>(nome na vitrine)</small></label>
+        <input v-model="form.staff_label" list="staff-labels" maxlength="30" required />
+        <datalist id="staff-labels"><option v-for="l in STAFF_LABELS" :key="l" :value="l" /></datalist>
+      </div>
+      <div v-if="biz.business.kind === 'agenda'" class="field" style="max-width: 200px">
         <label>Intervalo da agenda</label>
         <select v-model.number="form.slot_interval_min">
           <option v-for="m in [10, 15, 20, 30, 45, 60]" :key="m" :value="m">A cada {{ m }} min</option>
@@ -98,8 +103,8 @@ async function changePassword() {
       <div class="row" style="align-items: center; margin-top: 10px">
         <img v-if="form.logo_url" :src="form.logo_url" alt="" class="shrink" style="width: 44px; height: 44px; border-radius: 12px; object-fit: cover; background: #fff" />
         <strong class="shrink gradient-text" style="font-size: 1.2rem">{{ form.name }}</strong>
-        <span class="chip selected shrink">10:00</span>
-        <span class="btn shrink" style="pointer-events: none">Confirmar agendamento</span>
+        <span class="chip selected shrink">{{ biz.business.kind === 'agenda' ? '10:00' : 'Opção' }}</span>
+        <span class="btn shrink" style="pointer-events: none">{{ KINDS[biz.business.kind].action }}</span>
       </div>
     </div>
 

@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { supabase, unwrap } from '@/lib/supabase'
 import { useBusiness } from '@/lib/business'
+import { plural } from '@/lib/format'
 
 const biz = useBusiness()
 const professionals = ref([])
@@ -10,6 +11,7 @@ const error = ref('')
 const empty = () => ({ id: null, name: '', active: true, service_ids: [] })
 const form = ref(empty())
 
+const label = computed(() => biz.business.staff_label || 'Profissional')
 const limit = computed(() => biz.plan?.max_professionals)
 const activeCount = computed(() => professionals.value.filter((p) => p.active).length)
 
@@ -58,16 +60,16 @@ function serviceNames(ids) {
 
 <template>
   <div class="page-header spread">
-    <h1>Profissionais</h1>
-    <span class="muted">{{ activeCount }} ativo(s){{ limit ? ` de ${limit} do seu plano` : '' }}</span>
+    <h1>{{ label === 'Profissional' ? 'Profissionais' : `${label}s` }}</h1>
+    <span class="muted">{{ plural(activeCount, 'ativo', 'ativos') }}{{ limit ? ` de ${limit} do seu plano` : '' }}</span>
   </div>
   <div v-if="error" class="error">{{ error }}</div>
 
   <form class="card" @submit.prevent="save">
-    <h3>{{ form.id ? 'Editar profissional' : 'Novo profissional' }}</h3>
+    <h3>{{ form.id ? `Editar ${label.toLowerCase()}` : `Adicionar ${label.toLowerCase()}` }}</h3>
     <div class="field"><label>Nome</label><input v-model="form.name" required /></div>
     <div class="field">
-      <label>Serviços que realiza</label>
+      <label>Serviços disponíveis</label>
       <p v-if="!services.length" class="muted">Cadastre os serviços primeiro.</p>
       <div class="chips">
         <label v-for="s in services" :key="s.id" class="chip" :class="{ selected: form.service_ids.includes(s.id) }">
@@ -85,7 +87,7 @@ function serviceNames(ids) {
   </form>
 
   <div class="card table-wrap">
-    <p v-if="!professionals.length" class="muted">Nenhum profissional cadastrado. Cadastre ao menos um (pode ser você).</p>
+    <p v-if="!professionals.length" class="muted">Nenhum cadastro ainda. Cadastre ao menos um (pode ser você, uma quadra, uma sala...).</p>
     <table v-else>
       <thead><tr><th>Nome</th><th>Serviços</th><th>Status</th><th></th></tr></thead>
       <tbody>

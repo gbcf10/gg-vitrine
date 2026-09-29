@@ -1,4 +1,4 @@
-# GG Agendaí — Hostnet (Apache)
+# GG Vitrine — Hostnet (Apache)
 # Envia todas as rotas (ex.: /barbearia-do-ze, /painel) para o index.html,
 # que é onde o Vue Router decide qual página mostrar.
 <IfModule mod_rewrite.c>

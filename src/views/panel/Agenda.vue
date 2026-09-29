@@ -2,7 +2,8 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { supabase, unwrap } from '@/lib/supabase'
 import { useBusiness } from '@/lib/business'
-import { money, formatTime, formatDate, todayISO, addDaysISO, zonedToUtc, APPOINTMENT_STATUS } from '@/lib/format'
+import { plural, money, formatTime, formatDate, formatDateTime, todayISO, addDaysISO, zonedToUtc, APPOINTMENT_STATUS } from '@/lib/format'
+import { waLink } from '@/lib/whatsapp'
 
 const biz = useBusiness()
 const tz = computed(() => biz.business.timezone)
@@ -14,6 +15,14 @@ const services = ref([])
 const customers = ref([])
 const error = ref('')
 const showForm = ref(false)
+
+// Lembrete manual pelo WhatsApp (o automático vem com a integração paga).
+function reminder(a) {
+  if (!a.customer?.phone) return null
+  return waLink(a.customer.phone,
+    `Olá ${a.customer.name}! Passando para lembrar do seu horário em ${biz.business.name}: ` +
+    `*${a.service?.name}* ${formatDateTime(a.starts_at, tz.value)} com ${a.professional?.name}. Até lá!`)
+}
 
 const STATUS_BADGE = { scheduled: '', confirmed: 'green', completed: 'green', canceled: 'red', no_show: 'yellow' }
 
@@ -73,7 +82,7 @@ async function createAppointment() {
     })
     if (err) {
       throw new Error(err.message.includes('appointments_no_overlap')
-        ? 'Esse profissional já tem um agendamento nesse horário.' : err.message)
+        ? `${biz.business.staff_label} já tem um agendamento nesse horário.` : err.message)
     }
     form.value = emptyForm()
     showForm.value = false
@@ -97,7 +106,7 @@ async function createAppointment() {
     <button class="btn secondary shrink" @click="date = addDaysISO(date, 1)">›</button>
     <button class="btn secondary shrink" @click="date = todayISO(tz)">Hoje</button>
     <select v-if="professionals.length > 1" v-model="professionalFilter" style="max-width: 220px">
-      <option value="">Todos os profissionais</option>
+      <option value="">Todos</option>
       <option v-for="p in professionals" :key="p.id" :value="p.id">{{ p.name }}</option>
     </select>
   </div>
@@ -127,7 +136,7 @@ async function createAppointment() {
         </select>
       </div>
       <div class="field">
-        <label>Profissional</label>
+        <label>{{ biz.business.staff_label }}</label>
         <select v-model="form.professional_id" required>
           <option v-for="p in professionals" :key="p.id" :value="p.id">{{ p.name }}</option>
         </select>
@@ -140,12 +149,12 @@ async function createAppointment() {
 
   <div class="card table-wrap">
     <div class="spread" style="margin-bottom: 8px">
-      <strong>{{ visible.length }} agendamento(s)</strong>
+      <strong>{{ plural(visible.length, 'agendamento', 'agendamentos') }}</strong>
       <span class="muted">Previsto: {{ money(dayTotal) }}</span>
     </div>
     <p v-if="!visible.length" class="muted">Nenhum agendamento neste dia.</p>
     <table v-else>
-      <thead><tr><th>Horário</th><th>Cliente</th><th>Serviço</th><th>Profissional</th><th>Status</th><th></th></tr></thead>
+      <thead><tr><th>Horário</th><th>Cliente</th><th>Serviço</th><th>{{ biz.business.staff_label }}</th><th>Status</th><th></th></tr></thead>
       <tbody>
         <tr v-for="a in visible" :key="a.id" :style="{ opacity: a.status === 'canceled' ? 0.5 : 1 }">
           <td style="white-space: nowrap">{{ formatTime(a.starts_at, tz) }} – {{ formatTime(a.ends_at, tz) }}</td>
@@ -153,11 +162,14 @@ async function createAppointment() {
           <td>{{ a.service?.name }}<br /><small class="muted">{{ money(a.price) }}</small></td>
           <td>{{ a.professional?.name }}</td>
           <td><span :class="['badge', STATUS_BADGE[a.status]]">{{ APPOINTMENT_STATUS[a.status] }}</span></td>
-          <td>
-            <select v-if="a.status !== 'canceled'" :value="a.status" style="min-width: 150px"
+          <td style="white-space: nowrap">
+            <select v-if="a.status !== 'canceled'" :value="a.status" style="min-width: 150px; width: auto"
                     @change="setStatus(a, $event.target.value)">
               <option v-for="(label, key) in APPOINTMENT_STATUS" :key="key" :value="key">{{ label }}</option>
             </select>
+            <a v-if="biz.hasFeature('lembretes') && reminder(a) && ['scheduled', 'confirmed'].includes(a.status)"
+               class="btn small secondary" style="margin-left: 6px" :href="reminder(a)" target="_blank" rel="noopener"
+               title="Enviar lembrete pelo WhatsApp">Lembrar</a>
           </td>
         </tr>
       </tbody>

@@ -1,5 +1,5 @@
 /* =====================================================================
-   GG Agendaí — identidade visual G&G Soluções
+   GG Vitrine — identidade visual G&G Soluções
    Fundo azul-marinho, destaque azul com brilho, títulos prateados.
    --brand* muda por estabelecimento (ver lib/colors.js).
    ===================================================================== */
@@ -261,3 +261,42 @@ th { font-size: 0.72rem; color: var(--muted); font-weight: 700; text-transform: 
 .auth-logo .logo { font-size: 1.4rem; }
 .topnav .links a:not(.btn) { color: var(--text); font-weight: 500; font-size: 0.95rem; padding: 0 6px; }
 .topnav .links a:not(.btn):hover { color: var(--brand-ink); }
+
+/* =====================================================================
+   Páginas públicas das vitrines (usam as cores --brand do estabelecimento)
+   ===================================================================== */
+.biz-hero { position: relative; overflow: hidden; border-bottom: 1px solid var(--border); background: linear-gradient(180deg, rgba(11, 23, 48, 0.7), transparent); }
+.biz-glow { position: absolute; inset: -60% -10% auto; height: 420px; background: radial-gradient(circle at 30% 50%, var(--brand-glow), transparent 60%); opacity: 0.55; filter: blur(30px); pointer-events: none; }
+.biz-head { position: relative; max-width: 760px; display: flex; gap: 18px; align-items: center; padding: 34px 0 28px; }
+.biz-logo { width: 78px; height: 78px; border-radius: 20px; object-fit: cover; background: #fff; flex-shrink: 0; box-shadow: 0 0 30px var(--brand-glow); border: 1px solid var(--border); }
+.biz-logo.initial { display: grid; place-items: center; font-size: 2rem; font-weight: 800; background: linear-gradient(140deg, var(--brand), var(--brand-strong)); color: var(--brand-contrast); }
+.pub-main { max-width: 760px; padding-top: 22px; padding-bottom: 48px; }
+.pub-section { margin-top: 28px; }
+.pub-section > h2 { font-size: 1.3rem; margin-bottom: 12px; }
+
+.tabs { display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); margin-bottom: 18px; }
+.tabs button { flex: 1; padding: 10px; border-radius: 999px; border: none; background: none; color: var(--muted); font: inherit; font-weight: 600; cursor: pointer; }
+.tabs button.on { background: linear-gradient(120deg, var(--brand), var(--brand-strong)); color: var(--brand-contrast); box-shadow: 0 0 18px var(--brand-glow); }
+
+.step-title { display: flex; align-items: center; gap: 10px; }
+.step { width: 26px; height: 26px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 0.8rem; font-weight: 800; background: var(--brand-soft); color: var(--brand-ink); border: 1px solid var(--border); flex-shrink: 0; }
+.option-item { display: block; width: 100%; margin-bottom: 10px; padding: 14px 16px; text-align: left; }
+.option-item:last-child { margin-bottom: 0; }
+
+.done { text-align: center; padding: 36px 22px; }
+.done-icon { width: 64px; height: 64px; margin: 0 auto 16px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(140deg, var(--brand), var(--brand-strong)); color: var(--brand-contrast); box-shadow: 0 0 30px var(--brand-glow); }
+.done-icon svg { width: 30px; height: 30px; }
+
+.powered { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 40px; font-size: 0.85rem; }
+.powered .logo { font-size: 0.95rem; }
+.powered .logo-mark { width: 26px; height: 26px; border-radius: 8px; }
+.powered .logo-mark svg { width: 15px; height: 15px; }
+
+.stars { display: inline-flex; gap: 2px; color: #fbbf24; }
+.stars svg { width: 16px; height: 16px; }
+
+.sheet-backdrop { position: fixed; inset: 0; z-index: 60; background: rgba(2, 6, 14, 0.7); backdrop-filter: blur(4px); display: flex; align-items: flex-end; justify-content: center; }
+.sheet { width: min(640px, 100%); max-height: 92vh; overflow-y: auto; background: #0a1426; border: 1px solid var(--border); border-radius: 22px 22px 0 0; padding: 22px 18px calc(22px + env(safe-area-inset-bottom)); box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.5); }
+@media (min-width: 700px) { .sheet-backdrop { align-items: center; } .sheet { border-radius: 22px; } }
+
+@media (max-width: 520px) { .biz-logo { width: 64px; height: 64px; } }

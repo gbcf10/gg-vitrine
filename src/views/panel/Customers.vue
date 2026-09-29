@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { supabase, unwrap } from '@/lib/supabase'
 import { useBusiness } from '@/lib/business'
-import { money, formatDateTime, APPOINTMENT_STATUS } from '@/lib/format'
+import { money, formatDateTime, APPOINTMENT_STATUS, plural } from '@/lib/format'
 
 const biz = useBusiness()
 const customers = ref([])
@@ -50,7 +50,7 @@ async function saveSelected() {
 <template>
   <div class="page-header spread">
     <h1>Clientes</h1>
-    <span class="muted">{{ customers.length }}{{ limit ? ` de ${limit}` : '' }} cliente(s)</span>
+    <span class="muted">{{ limit ? `${customers.length} de ${limit} clientes` : plural(customers.length, 'cliente', 'clientes') }}</span>
   </div>
   <div v-if="error" class="error">{{ error }}</div>
 

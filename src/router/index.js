@@ -16,6 +16,19 @@ const routes = [
       { path: 'horarios', component: () => import('@/views/panel/Hours.vue') },
       { path: 'clientes', component: () => import('@/views/panel/Customers.vue') },
       { path: 'bloqueios', component: () => import('@/views/panel/TimeOff.vue') },
+      { path: 'cardapio', component: () => import('@/views/panel/Menu.vue') },
+      { path: 'servicos-oferecidos', component: () => import('@/views/panel/Menu.vue') },
+      { path: 'funcionamento', component: () => import('@/views/panel/Store.vue') },
+      { path: 'pedidos', component: () => import('@/views/panel/Orders.vue') },
+      { path: 'orcamentos', component: () => import('@/views/panel/Quotes.vue') },
+      { path: 'reservas', component: () => import('@/views/panel/Reservations.vue') },
+      { path: 'eventos', component: () => import('@/views/panel/Events.vue') },
+      { path: 'links', component: () => import('@/views/panel/Links.vue') },
+      { path: 'galeria', component: () => import('@/views/panel/Gallery.vue') },
+      { path: 'avaliacoes', component: () => import('@/views/panel/Reviews.vue') },
+      { path: 'fidelidade', component: () => import('@/views/panel/Loyalty.vue') },
+      { path: 'cupons', component: () => import('@/views/panel/Coupons.vue') },
+      { path: 'divulgar', component: () => import('@/views/panel/Share.vue') },
       { path: 'perfil', component: () => import('@/views/panel/Profile.vue') },
       { path: 'assinatura', component: () => import('@/views/panel/Subscription.vue') },
     ],
@@ -29,8 +42,10 @@ const routes = [
       { path: 'empresas', component: () => import('@/views/admin/Businesses.vue') },
     ],
   },
+  // Pré-visualização das vitrines com dados de exemplo (só em desenvolvimento).
+  ...(import.meta.env.DEV ? [{ path: '/dev/vitrine/:kind', component: () => import('@/views/public/DevPreview.vue') }] : []),
   // Página pública de cada estabelecimento: precisa ser a última rota.
-  { path: '/:slug', component: () => import('@/views/public/BookingPage.vue') },
+  { path: '/:slug', component: () => import('@/views/public/PublicPage.vue') },
 ]
 
 const router = createRouter({

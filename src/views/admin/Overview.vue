@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { supabase, unwrap } from '@/lib/supabase'
-import { money, BUSINESS_STATUS } from '@/lib/format'
+import { money, BUSINESS_STATUS, plural } from '@/lib/format'
 
 const stats = ref(null)
 const error = ref('')
@@ -54,7 +54,7 @@ onMounted(async () => {
           </tbody>
         </table>
         <RouterLink v-if="stats.businesses_by_status.pending" to="/admin/empresas" class="btn small" style="margin-top: 14px">
-          Analisar {{ stats.businesses_by_status.pending }} pendente(s)
+          Analisar {{ plural(stats.businesses_by_status.pending, 'pendente', 'pendentes') }}
         </RouterLink>
       </div>
       <div class="card" style="margin: 0">
