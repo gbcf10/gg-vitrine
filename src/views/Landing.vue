@@ -2,10 +2,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { supabase } from '@/lib/supabase'
 import { money } from '@/lib/format'
-import { CATEGORIES_BY_KIND, FEATURE_LABELS, APP_DOMAIN, APP_SLOGAN, KINDS } from '@/config/brand'
+import { CATEGORIES_BY_KIND, FEATURE_LABELS, APP_DOMAIN, APP_SLOGAN, KINDS, SUPPORT_WHATSAPP } from '@/config/brand'
+import { waLink } from '@/lib/whatsapp'
 import AppLogo from '@/components/AppLogo.vue'
 import Icon from '@/components/Icon.vue'
 
+const contactLink = waLink(SUPPORT_WHATSAPP, 'Olá! Quero saber mais sobre o GG Vitrine.')
 const allPlans = ref([])
 const plans = computed(() => allPlans.value.filter((p) => p.kind === 'agenda'))
 const kindCards = computed(() => Object.entries(KINDS).map(([kind, k]) => {
@@ -198,6 +200,7 @@ const features = [
       <div class="muted" style="font-size: 0.85rem; margin-top: 6px">{{ APP_SLOGAN }}</div>
     </div>
     <div class="footer-links">
+      <a v-if="contactLink" :href="contactLink" target="_blank" rel="noopener">Fale conosco</a>
       <RouterLink to="/termos">Termos de uso</RouterLink>
       <RouterLink to="/privacidade">Privacidade</RouterLink>
       <span class="muted">Um produto <a href="https://portfoliogegsolucoes.netlify.app/" target="_blank" rel="noopener">G&amp;G Soluções</a></span>

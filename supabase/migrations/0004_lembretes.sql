@@ -20,24 +20,26 @@ create extension if not exists pg_cron;
 -- Configuração
 -- ---------------------------------------------------------------------
 
+-- (Este arquivo pode ser rodado de novo com segurança: pula o que já existe.)
 alter table businesses
-  add column remind_client_offsets int[] not null default '{60}',
-  add column remind_staff_offsets  int[] not null default '{}',
-  add constraint businesses_remind_offsets_check check (
-    remind_client_offsets <@ array[30, 45, 60, 90, 120] and remind_staff_offsets <@ array[30, 45, 60, 90, 120]);
+  add column if not exists remind_client_offsets int[] not null default '{60}',
+  add column if not exists remind_staff_offsets  int[] not null default '{}';
+alter table businesses drop constraint if exists businesses_remind_offsets_check;
+alter table businesses add constraint businesses_remind_offsets_check check (
+  remind_client_offsets <@ array[30, 45, 60, 90, 120] and remind_staff_offsets <@ array[30, 45, 60, 90, 120]);
 
 grant update (remind_client_offsets, remind_staff_offsets) on businesses to authenticated;
 
 -- Contato do profissional, para ele também receber os lembretes.
 alter table professionals
-  add column phone text check (char_length(phone) <= 30),
-  add column email text check (char_length(email) <= 120);
+  add column if not exists phone text check (char_length(phone) <= 30),
+  add column if not exists email text check (char_length(email) <= 120);
 
 -- ---------------------------------------------------------------------
 -- Registro dos lembretes (garante que cada um sai uma vez só)
 -- ---------------------------------------------------------------------
 
-create table reminder_log (
+create table if not exists reminder_log (
   id             uuid primary key default gen_random_uuid(),
   business_id    uuid not null references businesses (id) on delete cascade,
   appointment_id uuid not null references appointments (id) on delete cascade,
@@ -49,9 +51,10 @@ create table reminder_log (
   created_at     timestamptz not null default now(),
   unique (appointment_id, target, offset_min)
 );
-create index on reminder_log (business_id, created_at desc);
+create index if not exists reminder_log_business_idx on reminder_log (business_id, created_at desc);
 
 alter table reminder_log enable row level security;
+drop policy if exists reminder_log_read on reminder_log;
 create policy reminder_log_read on reminder_log for select
   using (is_member(business_id) or is_platform_admin());
 revoke insert, update, delete on reminder_log from anon, authenticated;
@@ -63,7 +66,7 @@ revoke insert, update, delete on reminder_log from anon, authenticated;
 -- Um lembrete "vence" quando faltam N minutos ou menos para o horário.
 -- Lembretes atrasados mais de 20 minutos são ignorados (ex.: agendamento
 -- feito em cima da hora ou configuração ligada depois).
-create function due_reminders(p_limit int default 200)
+create or replace function due_reminders(p_limit int default 200)
 returns table (business_id uuid, appointment_id uuid, target text, offset_min int,
                to_email text, to_phone text, to_name text, business_name text, business_address text,
                service_name text, staff_name text, customer_name text, starts_at timestamptz, timezone text)
@@ -96,13 +99,13 @@ language sql stable security definer set search_path = public as $$
 $$;
 revoke execute on function due_reminders(int) from public, anon, authenticated;
 
-create function _reminder_when(p_offset int) returns text language sql immutable as $$
+create or replace function _reminder_when(p_offset int) returns text language sql immutable as $$
   select case p_offset when 30 then '30 minutos' when 45 then '45 minutos' when 60 then '1 hora'
                        when 90 then '1 hora e meia' when 120 then '2 horas' else p_offset || ' minutos' end
 $$;
 
 -- Envia os lembretes vencidos por e-mail (Resend) e registra cada um.
-create function send_due_reminders() returns int
+create or replace function send_due_reminders() returns int
 language plpgsql security definer set search_path = public as $$
 declare
   v_key  text;
@@ -159,6 +162,7 @@ end $$;
 revoke execute on function send_due_reminders() from public, anon, authenticated;
 
 -- Roda a cada 5 minutos.
+select cron.unschedule(jobid) from cron.job where jobname = 'gg-vitrine-lembretes';
 select cron.schedule('gg-vitrine-lembretes', '*/5 * * * *', $$select public.send_due_reminders()$$);
 
 -- ---------------------------------------------------------------------
@@ -210,7 +214,7 @@ revoke execute on function enforce_plan_limits() from public, anon, authenticate
 -- =====================================================================
 -- PARA LIGAR O ENVIO AUTOMÁTICO (fazer uma vez, quando tiver o domínio):
 --   1. Crie uma conta grátis em https://resend.com e verifique o domínio
---      ggvitrine.com.br (eles mostram os registros DNS para colar na Hostnet/Hostinger).
+--      ggvitrine.com.br (eles mostram os registros DNS para colar na Hostinger).
 --   2. Gere uma API Key no Resend.
 --   3. Rode no SQL Editor (trocando os valores):
 --        select vault.create_secret('re_SUA_CHAVE_AQUI', 'resend_api_key');

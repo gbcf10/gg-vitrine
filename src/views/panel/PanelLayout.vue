@@ -5,7 +5,8 @@ import { supabase } from '@/lib/supabase'
 import { signOut, isPlatformAdmin } from '@/lib/session'
 import { createBusinessContext, provideKey } from '@/lib/business'
 import { slugify } from '@/lib/format'
-import { APP_NAME, APP_DOMAIN, KINDS, CATEGORIES_BY_KIND } from '@/config/brand'
+import { APP_NAME, APP_DOMAIN, KINDS, CATEGORIES_BY_KIND, SUPPORT_WHATSAPP } from '@/config/brand'
+import { waLink } from '@/lib/whatsapp'
 import { brandVars } from '@/lib/colors'
 import AppLogo from '@/components/AppLogo.vue'
 import Icon from '@/components/Icon.vue'
@@ -20,6 +21,8 @@ const isAdmin = ref(false)
 const brandStyle = computed(() => brandVars(biz.business?.primary_color))
 const publicLink = computed(() => biz.business && `${location.origin}/${biz.business.slug}`)
 const copied = ref(false)
+const supportLink = computed(() => SUPPORT_WHATSAPP &&
+  waLink(SUPPORT_WHATSAPP, `Olá! Preciso de ajuda com o ${biz.business?.name ?? 'meu cadastro'} no ${APP_NAME}.`))
 
 async function copyLink() {
   await navigator.clipboard.writeText(publicLink.value)
@@ -134,6 +137,7 @@ async function requestBusiness() {
       </template>
       <div class="row">
         <button class="btn secondary shrink" @click="biz.reload()">Atualizar</button>
+        <a v-if="supportLink" class="btn shrink" :href="supportLink" target="_blank" rel="noopener">Falar com o suporte</a>
         <RouterLink v-if="isAdmin" class="btn secondary shrink" to="/admin">Painel admin</RouterLink>
         <button class="btn secondary shrink" @click="logout">Sair</button>
       </div>
@@ -167,6 +171,7 @@ async function requestBusiness() {
           <Icon name="link" style="width: 15px; height: 15px" />{{ copied ? 'Copiado!' : 'Copiar link' }}
         </button>
       </div>
+      <a v-if="supportLink" class="support" :href="supportLink" target="_blank" rel="noopener"><Icon name="whatsapp" />Suporte</a>
       <div class="footer">{{ APP_NAME }} · G&amp;G Soluções</div>
     </aside>
     <main class="main">
@@ -177,5 +182,8 @@ async function requestBusiness() {
 
 <style scoped>
 .sidebar nav a.locked { opacity: 0.6; }
+.support { display: flex; align-items: center; gap: 8px; margin-top: 16px; padding: 10px 12px; border-radius: var(--radius-sm); color: var(--muted); font-size: 0.9rem; }
+.support:hover { background: var(--surface); color: var(--text); }
+.support svg { width: 18px; height: 18px; }
 .lock-tag { margin-left: auto; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.06em; padding: 2px 6px; border-radius: 6px; background: var(--brand-soft); color: var(--brand-ink); border: 1px solid var(--border); }
 </style>

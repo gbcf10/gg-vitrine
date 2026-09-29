@@ -2,7 +2,7 @@
 export const APP_NAME = 'GG Vitrine'
 export const APP_DOMAIN = 'ggvitrine.com.br'
 export const APP_SLOGAN = 'Mostre seus serviços. Receba clientes.'
-export const SUPPORT_WHATSAPP = '' // ex.: '5511999999999'
+export const SUPPORT_WHATSAPP = '5521967449745' // (21) 96744-9745
 
 // Dados da empresa usados nos Termos de uso e na Política de privacidade.
 // Preencher antes do lançamento.
