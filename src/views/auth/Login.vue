@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '@/lib/supabase'
+import { isPlatformAdmin } from '@/lib/session'
 import AppLogo from '@/components/AppLogo.vue'
 import BackButton from '@/components/BackButton.vue'
 
@@ -22,7 +23,8 @@ async function submit() {
     error.value = err.message === 'Invalid login credentials' ? 'E-mail ou senha incorretos.' : err.message
     return
   }
-  router.push(route.query.redirect || '/painel')
+  // O dono da plataforma cai direto no painel de administração.
+  router.push(route.query.redirect || ((await isPlatformAdmin()) ? '/admin' : '/painel'))
 }
 
 async function forgot() {
