@@ -2,26 +2,21 @@
 import { ref, computed, onMounted } from 'vue'
 import { supabase, unwrap } from '@/lib/supabase'
 import { money, formatDate, todayISO, BUSINESS_STATUS, SUBSCRIPTION_STATUS } from '@/lib/format'
-import { KINDS } from '@/config/brand'
 
 const rows = ref([])
 const plans = ref([])
 const filter = ref('')
-const kindFilter = ref('')
 const search = ref('')
 const error = ref('')
 const editing = ref(null)   // empresa aberta no formulário de assinatura
 const payment = ref(null)   // empresa aberta no formulário de pagamento
 
-const KIND_LABEL = Object.fromEntries(Object.entries(KINDS).map(([k, v]) => [k, v.label]))
-const ACTIVITY = { agenda: 'agendamentos', cardapio: 'pedidos', orcamento: 'orçamentos', reserva: 'reservas', evento: 'inscrições', cartao: 'links' }
 const STATUS_BADGE = { pending: 'yellow', approved: 'green', rejected: 'red', blocked: 'red' }
 
 const visible = computed(() => {
   const q = search.value.trim().toLowerCase()
   return rows.value.filter((r) =>
     (!filter.value || r.status === filter.value) &&
-    (!kindFilter.value || r.kind === kindFilter.value) &&
     (!q || `${r.name} ${r.slug} ${r.owner_email}`.toLowerCase().includes(q)))
 })
 
@@ -54,7 +49,7 @@ function setStatus(b, status) {
 
 // ---- Plano e preço negociado ----
 function openEdit(b) {
-  const plan = b.plan_id ?? (b.kind === 'cardapio' ? 'cardapio' : 'basico')
+  const plan = b.plan_id ?? 'solo'
   editing.value = {
     business: b, plan_id: plan,
     custom_price: b.custom_price, discount_amount: b.discount_amount ?? 0,
@@ -82,15 +77,15 @@ function discountUntil(e) {
 async function saveEdit() {
   const e = editing.value
   const ok = await call('admin_update_subscription', {
-    p_business: e.business.id, p_plan: e.plan_id,
+    p_owner: e.business.owner_id, p_plan: e.plan_id,
     p_custom_price: e.custom_price === '' || e.custom_price == null ? null : Number(e.custom_price),
     p_discount_amount: Number(e.discount_amount || 0),
     p_discount_until: discountUntil(e),
     p_discount_note: e.discount_note || null,
   })
   if (ok) {
-    // Se a empresa paga pelo Asaas, atualiza o valor lá também (sem efeito para quem paga por fora).
-    supabase.functions.invoke('asaas-checkout', { body: { action: 'sync-price', business_id: e.business.id } }).catch(() => {})
+    // Se o dono paga pelo Asaas, atualiza o valor lá também.
+    supabase.functions.invoke('asaas-checkout', { body: { action: 'sync-price', owner_id: e.business.owner_id } }).catch(() => {})
     editing.value = null
   }
 }
@@ -103,7 +98,7 @@ function openPayment(b) {
 async function savePayment() {
   const p = payment.value
   const ok = await call('admin_register_payment', {
-    p_business: p.business.id, p_amount: Number(p.amount), p_months: Number(p.months),
+    p_owner: p.business.owner_id, p_amount: Number(p.amount), p_months: Number(p.months),
     p_method: p.method, p_note: p.note || null,
   })
   if (ok) payment.value = null
@@ -122,7 +117,7 @@ async function savePayment() {
       <div class="field">
         <label>Plano</label>
         <select v-model="editing.plan_id">
-          <option v-for="p in plans.filter((x) => x.kind === editing.business.kind)" :key="p.id" :value="p.id">{{ p.name }} ({{ money(p.base_price) }})</option>
+          <option v-for="p in plans" :key="p.id" :value="p.id">{{ p.name }} ({{ money(p.base_price) }})</option>
         </select>
       </div>
       <div class="field">
@@ -185,10 +180,6 @@ async function savePayment() {
         <option value="">Todos os status</option>
         <option v-for="(label, key) in BUSINESS_STATUS" :key="key" :value="key">{{ label }}</option>
       </select>
-      <select v-model="kindFilter" style="max-width: 200px">
-        <option value="">Todos os tipos</option>
-        <option v-for="(label, key) in KIND_LABEL" :key="key" :value="key">{{ label }}</option>
-      </select>
     </div>
     <div class="table-wrap">
       <table>
@@ -199,7 +190,6 @@ async function savePayment() {
           <tr v-for="b in visible" :key="b.id">
             <td>
               <strong>{{ b.name }}</strong><br />
-              <span class="badge blue" style="margin-left: 6px">{{ KIND_LABEL[b.kind] }}</span><br />
               <small class="muted">/{{ b.slug }} · {{ b.category }}<br />{{ b.owner_email }} · {{ b.phone }}</small>
             </td>
             <td>
@@ -223,9 +213,8 @@ async function savePayment() {
               </template>
             </td>
             <td>
-              <small v-if="b.kind === 'agenda'">{{ b.professionals_count }} prof.<br />{{ b.customers_count }} clientes<br /></small>
-              <small v-else-if="b.kind === 'cardapio'">{{ b.menu_items_count }} produtos<br /></small>
-              <small>{{ b.activity_count }} {{ ACTIVITY[b.kind] }}</small>
+              <small>{{ b.professionals_count }} prof.<br />{{ b.customers_count }} clientes<br /></small>
+              <small>{{ b.activity_count }} agendamentos</small>
             </td>
             <td>
               <div class="chips">

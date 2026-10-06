@@ -3,6 +3,8 @@ import { ref, computed, watch } from 'vue'
 import { supabase, unwrap } from '@/lib/supabase'
 import { session, signOut } from '@/lib/session'
 import { money, formatTime, formatDate, formatDateTime, todayISO, addDaysISO, zonedToUtc, APPOINTMENT_STATUS } from '@/lib/format'
+import { waLink } from '@/lib/whatsapp'
+import Icon from '@/components/Icon.vue'
 
 const props = defineProps({ business: { type: Object, required: true } })
 const business = computed(() => props.business)
@@ -11,6 +13,16 @@ const error = ref('')
 const tz = computed(() => business.value.timezone)
 const staffLabel = computed(() => business.value.staff_label || 'Profissional')
 const hasCoupons = computed(() => business.value.features.includes('cupons'))
+
+// Ícone-padrão por categoria pra ilustrar os cards de serviço.
+const CATEGORY_ICON = {
+  Barbearia: 'scissors', 'Salão de beleza': 'sparkles', Estética: 'sparkles',
+  Manicure: 'sparkles', Tatuagem: 'sparkles', 'Clínica': 'shield',
+  Odontologia: 'shield', 'Estúdio fotográfico': 'image',
+}
+function iconFor() {
+  return CATEGORY_ICON[business.value?.category] || 'calendar'
+}
 
 // ---------------- Agendamento ----------------
 const service = ref(null)
@@ -42,8 +54,14 @@ function professionalName(id) {
 
 function dayLabel(d) {
   const noon = zonedToUtc(d, '12:00', tz.value)
+  const today = todayISO(tz.value)
+  const tomorrow = addDaysISO(today, 1)
+  let weekday
+  if (d === today) weekday = 'Hoje'
+  else if (d === tomorrow) weekday = 'Amanhã'
+  else weekday = formatDate(noon, tz.value, { weekday: 'short' }).replace('.', '')
   return {
-    weekday: formatDate(noon, tz.value, { weekday: 'short' }).replace('.', ''),
+    weekday,
     day: formatDate(noon, tz.value, { day: '2-digit', month: '2-digit' }),
   }
 }
@@ -68,12 +86,27 @@ function pickService(s) {
   professionalId.value = pros.length === 1 ? pros[0].id : 'any'
 }
 
+function clearService() {
+  service.value = null
+  slot.value = null
+  slots.value = []
+}
+
 // ---------------- Login do cliente (código por e-mail) ----------------
 const email = ref('')
 const code = ref('')
 const codeSent = ref(false)
 const customer = ref({ name: '', phone: '' })
 const busy = ref(false)
+const resendIn = ref(0)
+
+function startResendTimer() {
+  resendIn.value = 60
+  const t = setInterval(() => {
+    resendIn.value--
+    if (resendIn.value <= 0) clearInterval(t)
+  }, 1000)
+}
 
 async function sendCode() {
   error.value = ''
@@ -83,8 +116,21 @@ async function sendCode() {
     options: { shouldCreateUser: true, emailRedirectTo: location.href },
   })
   busy.value = false
-  if (err) error.value = err.message
-  else codeSent.value = true
+  if (err) { error.value = err.message; return }
+  codeSent.value = true
+  startResendTimer()
+}
+
+async function resendCode() {
+  if (resendIn.value > 0 || busy.value) return
+  await sendCode()
+}
+
+function changeEmail() {
+  codeSent.value = false
+  code.value = ''
+  resendIn.value = 0
+  error.value = ''
 }
 
 async function verifyCode() {
@@ -142,6 +188,13 @@ function restart() {
   slot.value = null
 }
 
+// WhatsApp pós-agendamento (opcional).
+const bookedWaLink = computed(() => {
+  if (!booked.value || !business.value.phone) return null
+  const msg = `Oi! Confirmei meu agendamento de ${booked.value.service.name} para ${formatDateTime(booked.value.starts_at, tz.value)}.`
+  return waLink(business.value.phone, msg)
+})
+
 // ---------------- Meus agendamentos ----------------
 const mine = ref([])
 const rescheduling = ref(null)
@@ -187,12 +240,13 @@ async function confirmReschedule() {
 
 <template>
   <div v-if="!business.live" class="card">
-    <p>Este estabelecimento não está recebendo agendamentos online no momento.</p>
-    <p v-if="business.phone" class="muted">Contato: {{ business.phone }}</p>
+    <h3 style="margin: 0 0 8px">Temporariamente indisponível</h3>
+    <p class="muted" style="margin: 0 0 6px">Este estabelecimento não está recebendo agendamentos online no momento.</p>
+    <p v-if="business.phone" class="muted" style="margin: 0">Para falar diretamente: <strong>{{ business.phone }}</strong></p>
   </div>
 
   <template v-else>
-    <div class="tabs">
+    <div class="booking-tabs">
       <button :class="{ on: tab === 'agendar' }" @click="tab = 'agendar'; rescheduling = null">Agendar</button>
       <button :class="{ on: tab === 'meus' }" @click="tab = 'meus'">Meus agendamentos</button>
     </div>
@@ -201,56 +255,129 @@ async function confirmReschedule() {
 
     <!-- ============ AGENDAR ============ -->
     <template v-if="tab === 'agendar'">
-      <div v-if="booked" class="card glow done">
-        <div class="done-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></div>
-        <h2 class="gradient-text" style="justify-content: center">Agendamento confirmado!</h2>
-        <p>
-          <strong>{{ booked.service.name }}</strong> com {{ professionalName(booked.professional_id) }}<br />
-          {{ formatDateTime(booked.starts_at, tz) }}
-        </p>
-        <p class="muted">Você pode ver, cancelar ou remarcar em "Meus agendamentos".</p>
-        <button class="btn" @click="restart">Fazer outro agendamento</button>
+      <!-- Sucesso -->
+      <div v-if="booked" class="card glow booking-done">
+        <div class="done-ico"><Icon name="check" /></div>
+        <h2 class="gradient-text">Agendamento confirmado!</h2>
+        <p class="muted" style="margin: 0">Tá tudo certo. Guardamos aqui embaixo e você pode conferir em "Meus agendamentos".</p>
+        <div class="summary">
+          <div class="summary-row">
+            <span class="label"><Icon name="scissors" />Serviço</span>
+            <span class="value">{{ booked.service.name }}</span>
+          </div>
+          <div class="summary-row">
+            <span class="label"><Icon name="contact" />{{ staffLabel }}</span>
+            <span class="value">{{ professionalName(booked.professional_id) }}</span>
+          </div>
+          <div class="summary-row">
+            <span class="label"><Icon name="calendar" />Quando</span>
+            <span class="value">{{ formatDateTime(booked.starts_at, tz) }}</span>
+          </div>
+          <div class="summary-row total">
+            <span class="label">Total</span>
+            <span class="value">{{ money(booked.price) }}</span>
+          </div>
+        </div>
+        <div class="done-actions">
+          <a v-if="bookedWaLink" :href="bookedWaLink" target="_blank" rel="noopener" class="btn">
+            <Icon name="whatsapp" />Falar no WhatsApp
+          </a>
+          <button class="btn secondary" @click="restart">Fazer outro agendamento</button>
+        </div>
+        <p class="muted" style="font-size: 0.82rem; margin: 16px 0 0">Ver, cancelar ou remarcar em "Meus agendamentos".</p>
       </div>
 
       <template v-else>
         <!-- 1. Serviço -->
         <div class="card">
-          <h3 class="step-title"><span class="step">1</span>Escolha o serviço</h3>
-          <p v-if="!business.services.length" class="muted">Nenhum serviço disponível.</p>
-          <div v-for="s in business.services" :key="s.id" class="chip option-item"
-               :class="{ selected: service?.id === s.id }" @click="pickService(s)">
-            <div class="spread">
-              <strong>{{ s.name }}</strong>
-              <span>{{ money(s.price) }}</span>
-            </div>
-            <small :style="{ opacity: 0.8 }">{{ s.duration_min }} min<span v-if="s.description"> · {{ s.description }}</span></small>
+          <div class="step-head">
+            <span class="step-chip"><span class="n">1</span>Serviço</span>
+            <h3>O que você quer agendar?</h3>
+            <p v-if="!service">Escolha abaixo pra ver os horários disponíveis.</p>
+            <p v-else>Toque pra trocar a qualquer momento.</p>
+          </div>
+          <p v-if="!business.services.length" class="muted">Nenhum serviço disponível no momento.</p>
+          <div v-else class="svc-grid">
+            <button
+              v-for="s in business.services"
+              :key="s.id"
+              type="button"
+              class="svc-card"
+              :class="{ on: service?.id === s.id }"
+              @click="service?.id === s.id ? clearService() : pickService(s)"
+            >
+              <div class="svc-icon"><Icon :name="iconFor()" /></div>
+              <div class="svc-body">
+                <span class="name">{{ s.name }}</span>
+                <span v-if="s.description" class="desc">{{ s.description }}</span>
+              </div>
+              <div class="svc-meta">
+                <span class="svc-price">{{ money(s.price) }}</span>
+                <span class="svc-duration"><Icon name="clock" />{{ s.duration_min }} min</span>
+              </div>
+            </button>
           </div>
         </div>
 
         <!-- 2. Profissional -->
         <div v-if="service && professionalsForService.length > 1" class="card">
-          <h3 class="step-title"><span class="step">2</span>{{ staffLabel }}</h3>
-          <div class="chips">
-            <button class="chip" :class="{ selected: professionalId === 'any' }" @click="professionalId = 'any'">Qualquer um</button>
-            <button v-for="p in professionalsForService" :key="p.id" class="chip"
-                    :class="{ selected: professionalId === p.id }" @click="professionalId = p.id">{{ p.name }}</button>
+          <div class="step-head">
+            <span class="step-chip"><span class="n">2</span>{{ staffLabel }}</span>
+            <h3>Com quem você quer ser atendido?</h3>
+            <p>Escolha "qualquer um" pra ver mais horários.</p>
+          </div>
+          <div class="pro-chips">
+            <button
+              type="button" class="pro-chip"
+              :class="{ on: professionalId === 'any' }"
+              @click="professionalId = 'any'"
+            >
+              <span class="pro-avatar"><Icon name="users" style="width:14px;height:14px" /></span>
+              Qualquer um
+            </button>
+            <button
+              v-for="p in professionalsForService" :key="p.id"
+              type="button" class="pro-chip"
+              :class="{ on: professionalId === p.id }"
+              @click="professionalId = p.id"
+            >
+              <span class="pro-avatar">{{ p.name.charAt(0).toUpperCase() }}</span>
+              {{ p.name }}
+            </button>
           </div>
         </div>
 
         <!-- 3. Data e horário -->
         <div v-if="service" class="card">
-          <h3 class="step-title"><span class="step">{{ professionalsForService.length > 1 ? 3 : 2 }}</span>Data e horário</h3>
-          <div class="chips" style="flex-wrap: nowrap; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px">
-            <button v-for="d in nextDays" :key="d" class="chip" :class="{ selected: date === d }"
-                    style="text-align: center; min-width: 64px" @click="date = d">
-              <small>{{ dayLabel(d).weekday }}</small><br /><strong>{{ dayLabel(d).day }}</strong>
+          <div class="step-head">
+            <span class="step-chip"><span class="n">{{ professionalsForService.length > 1 ? 3 : 2 }}</span>Data e horário</span>
+            <h3>Quando fica bom pra você?</h3>
+          </div>
+          <div class="day-strip">
+            <button
+              v-for="d in nextDays" :key="d"
+              type="button" class="day-pill"
+              :class="{ on: date === d }"
+              @click="date = d"
+            >
+              <small>{{ dayLabel(d).weekday }}</small>
+              <strong>{{ dayLabel(d).day }}</strong>
             </button>
           </div>
-          <p v-if="loadingSlots" class="muted">Buscando horários...</p>
-          <p v-else-if="!visibleSlots.length" class="muted">Nenhum horário livre neste dia. Tente outra data.</p>
-          <div v-else class="chips">
-            <button v-for="s in visibleSlots" :key="s.starts_at" class="chip"
-                    :class="{ selected: slot?.starts_at === s.starts_at }" @click="slot = s">
+
+          <p v-if="loadingSlots" class="muted" style="margin: 10px 0 0">Buscando horários...</p>
+          <div v-else-if="!visibleSlots.length" class="slot-empty">
+            <Icon name="ban" />
+            <p style="margin: 0">Nenhum horário livre neste dia.</p>
+            <small>Tente outra data acima.</small>
+          </div>
+          <div v-else class="slot-grid">
+            <button
+              v-for="s in visibleSlots" :key="s.starts_at"
+              type="button" class="slot-btn"
+              :class="{ on: slot?.starts_at === s.starts_at }"
+              @click="slot = s"
+            >
               {{ formatTime(s.starts_at, tz) }}
             </button>
           </div>
@@ -258,32 +385,98 @@ async function confirmReschedule() {
 
         <!-- 4. Confirmação -->
         <div v-if="slot" class="card glow">
-          <h3 class="step-title"><span class="step"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span>Confirmar</h3>
-          <p>
-            <strong>{{ service.name }}</strong> ·
-            <span v-if="coupon"><s class="muted">{{ money(service.price) }}</s> {{ money(finalPrice) }}</span>
-            <span v-else>{{ money(service.price) }}</span><br />
-            {{ formatDateTime(slot.starts_at, tz) }} com {{ professionalName(slot.professional_id) }}
-          </p>
+          <div class="step-head">
+            <span class="step-chip"><span class="n"><Icon name="check" style="width:12px;height:12px" /></span>Confirmar</span>
+            <h3>Tudo pronto, confere aí</h3>
+          </div>
+
+          <div class="summary">
+            <div class="summary-row">
+              <span class="label"><Icon name="scissors" />Serviço</span>
+              <span class="value">{{ service.name }}</span>
+            </div>
+            <div class="summary-row">
+              <span class="label"><Icon name="contact" />{{ staffLabel }}</span>
+              <span class="value">{{ professionalName(slot.professional_id) }}</span>
+            </div>
+            <div class="summary-row">
+              <span class="label"><Icon name="calendar" />Quando</span>
+              <span class="value">{{ formatDateTime(slot.starts_at, tz) }}</span>
+            </div>
+            <div class="summary-row total">
+              <span class="label">Total</span>
+              <span class="value">
+                <s v-if="coupon">{{ money(service.price) }}</s>{{ money(finalPrice) }}
+              </span>
+            </div>
+          </div>
 
           <template v-if="!session.user">
-            <p class="muted">Para confirmar, informe seu e-mail. Enviaremos um código de acesso.</p>
-            <form v-if="!codeSent" class="row" @submit.prevent="sendCode">
-              <input v-model="email" type="email" placeholder="seu@email.com" required />
-              <button class="btn shrink" :disabled="busy">Enviar código</button>
+            <!-- Passo 1: pede e-mail -->
+            <form v-if="!codeSent" @submit.prevent="sendCode">
+              <p class="muted" style="margin: 0 0 10px">Pra finalizar, informe seu e-mail. Vamos mandar um código de 6 dígitos.</p>
+              <div class="row" style="gap: 10px">
+                <div class="ff" style="flex: 1 1 180px; margin-bottom: 0">
+                  <input v-model="email" type="email" required placeholder=" " />
+                  <label>E-mail</label>
+                </div>
+                <button class="btn shrink" :disabled="busy">
+                  <Icon name="mail" />
+                  {{ busy ? 'Enviando...' : 'Enviar código' }}
+                </button>
+              </div>
             </form>
-            <form v-else class="row" @submit.prevent="verifyCode">
-              <input v-model="code" inputmode="numeric" placeholder="Código recebido no e-mail" required />
-              <button class="btn shrink" :disabled="busy">Entrar</button>
-            </form>
+
+            <!-- Passo 2: pede código -->
+            <div v-else class="otp-block">
+              <div class="otp-sent">
+                <div class="otp-sent-icon"><Icon name="check" /></div>
+                <div class="otp-sent-text">
+                  <strong>Código enviado!</strong>
+                  <small>Confira sua caixa de entrada <strong>e o spam</strong>. Enviado pra <strong>{{ email }}</strong>.</small>
+                </div>
+                <button type="button" class="link-btn otp-change" @click="changeEmail">Trocar</button>
+              </div>
+
+              <form @submit.prevent="verifyCode" class="otp-form">
+                <label class="otp-label" for="otp-input">Cole aqui o código do e-mail</label>
+                <div class="otp-row">
+                  <input
+                    id="otp-input"
+                    v-model="code"
+                    inputmode="numeric"
+                    autocomplete="one-time-code"
+                    maxlength="8"
+                    required
+                    class="otp-input"
+                    placeholder="________"
+                  />
+                  <button class="btn" :disabled="busy || code.length < 6">
+                    {{ busy ? 'Verificando...' : 'Entrar' }}
+                  </button>
+                </div>
+                <p class="otp-resend">
+                  Não recebeu?
+                  <button type="button" class="link-btn" :disabled="resendIn > 0 || busy" @click="resendCode">
+                    {{ resendIn > 0 ? `Reenviar em ${resendIn}s` : 'Reenviar código' }}
+                  </button>
+                </p>
+              </form>
+            </div>
           </template>
 
           <form v-else @submit.prevent="confirm">
-            <div class="row">
-              <div class="field"><label>Seu nome</label><input v-model="customer.name" required /></div>
-              <div class="field"><label>WhatsApp</label><input v-model="customer.phone" type="tel" required /></div>
+            <div class="row" style="gap: 10px">
+              <div class="ff" style="flex: 1 1 180px; margin-bottom: 0">
+                <input v-model="customer.name" required placeholder=" " />
+                <label>Seu nome</label>
+              </div>
+              <div class="ff" style="flex: 1 1 180px; margin-bottom: 0">
+                <input v-model="customer.phone" type="tel" required placeholder=" " />
+                <label>WhatsApp</label>
+              </div>
             </div>
-            <div v-if="hasCoupons" class="field">
+            <div v-if="hasCoupons" class="field" style="margin-top: 12px">
               <label>Cupom de desconto <small>(opcional)</small></label>
               <div class="row">
                 <input v-model="couponCode" placeholder="Ex.: PROMO10" style="text-transform: uppercase" />
@@ -292,8 +485,11 @@ async function confirmReschedule() {
               <small v-if="coupon" style="color: var(--success)">{{ coupon.message }}</small>
               <small v-if="couponError" style="color: var(--danger)">{{ couponError }}</small>
             </div>
-            <button class="btn block" :disabled="busy">{{ busy ? 'Confirmando...' : 'Confirmar agendamento' }}</button>
-            <p class="muted" style="font-size: 0.8rem; margin-top: 8px">
+            <button class="btn block" style="margin-top: 16px" :disabled="busy">
+              <Icon v-if="!busy" name="check" style="width:18px;height:18px" />
+              {{ busy ? 'Confirmando...' : 'Confirmar agendamento' }}
+            </button>
+            <p class="muted" style="font-size: 0.8rem; margin-top: 10px; text-align: center">
               Conectado como {{ session.user.email }} ·
               <button type="button" class="link-btn" @click="signOut">trocar</button>
             </p>
@@ -305,29 +501,48 @@ async function confirmReschedule() {
     <!-- ============ MEUS AGENDAMENTOS ============ -->
     <template v-else>
       <div v-if="!session.user" class="card">
-        <p>Entre com seu e-mail para ver seus agendamentos.</p>
+        <h3 style="margin: 0 0 6px">Seus agendamentos</h3>
+        <p class="muted" style="margin: 0 0 14px">Entre com seu e-mail pra ver, remarcar ou cancelar.</p>
         <form v-if="!codeSent" class="row" @submit.prevent="sendCode">
-          <input v-model="email" type="email" placeholder="seu@email.com" required />
-          <button class="btn shrink" :disabled="busy">Enviar código</button>
+          <div class="ff" style="flex: 1 1 180px; margin-bottom: 0">
+            <input v-model="email" type="email" required placeholder=" " />
+            <label>E-mail</label>
+          </div>
+          <button class="btn shrink" :disabled="busy">{{ busy ? 'Enviando...' : 'Enviar código' }}</button>
         </form>
         <form v-else class="row" @submit.prevent="verifyCode">
-          <input v-model="code" inputmode="numeric" placeholder="Código recebido no e-mail" required />
-          <button class="btn shrink" :disabled="busy">Entrar</button>
+          <div class="ff" style="flex: 1 1 180px; margin-bottom: 0">
+            <input v-model="code" inputmode="numeric" required placeholder=" " />
+            <label>Código recebido</label>
+          </div>
+          <button class="btn shrink" :disabled="busy">{{ busy ? 'Verificando...' : 'Entrar' }}</button>
         </form>
       </div>
 
       <div v-else-if="rescheduling" class="card">
-        <h3>Remarcar {{ rescheduling.service_name }}</h3>
-        <div class="chips" style="flex-wrap: nowrap; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px">
-          <button v-for="d in nextDays" :key="d" class="chip" :class="{ selected: date === d }"
-                  style="text-align: center; min-width: 64px" @click="date = d">
-            <small>{{ dayLabel(d).weekday }}</small><br /><strong>{{ dayLabel(d).day }}</strong>
+        <h3 style="margin: 0 0 10px">Remarcar {{ rescheduling.service_name }}</h3>
+        <div class="day-strip">
+          <button
+            v-for="d in nextDays" :key="d"
+            type="button" class="day-pill"
+            :class="{ on: date === d }"
+            @click="date = d"
+          >
+            <small>{{ dayLabel(d).weekday }}</small>
+            <strong>{{ dayLabel(d).day }}</strong>
           </button>
         </div>
-        <p v-if="!visibleSlots.length && !loadingSlots" class="muted">Nenhum horário livre neste dia.</p>
-        <div class="chips">
-          <button v-for="s in visibleSlots" :key="s.starts_at" class="chip"
-                  :class="{ selected: slot?.starts_at === s.starts_at }" @click="slot = s">
+        <div v-if="!visibleSlots.length && !loadingSlots" class="slot-empty" style="margin-top: 12px">
+          <Icon name="ban" />
+          <p style="margin: 0">Nenhum horário livre neste dia.</p>
+        </div>
+        <div v-else class="slot-grid" style="margin-top: 12px">
+          <button
+            v-for="s in visibleSlots" :key="s.starts_at"
+            type="button" class="slot-btn"
+            :class="{ on: slot?.starts_at === s.starts_at }"
+            @click="slot = s"
+          >
             {{ formatTime(s.starts_at, tz) }}
           </button>
         </div>
@@ -338,11 +553,12 @@ async function confirmReschedule() {
       </div>
 
       <div v-else class="card">
-        <p v-if="!mine.length" class="muted">Você ainda não tem agendamentos aqui.</p>
-        <div v-for="a in mine" :key="a.id" class="spread" style="padding: 12px 0; border-bottom: 1px solid var(--border)">
-          <div>
-            <strong>{{ a.service_name }}</strong> com {{ a.professional_name }}<br />
-            <span class="muted">{{ formatDateTime(a.starts_at, tz) }} · {{ APPOINTMENT_STATUS[a.status] }}</span>
+        <p v-if="!mine.length" class="muted" style="margin: 0">Você ainda não tem agendamentos aqui.</p>
+        <div v-for="a in mine" :key="a.id" class="spread" style="padding: 14px 0; border-bottom: 1px solid var(--border); gap: 14px">
+          <div style="min-width: 0">
+            <strong>{{ a.service_name }}</strong>
+            <span class="muted"> com {{ a.professional_name }}</span><br />
+            <span class="muted" style="font-size: 0.88rem">{{ formatDateTime(a.starts_at, tz) }} · {{ APPOINTMENT_STATUS[a.status] }}</span>
           </div>
           <div v-if="canChange(a)" class="row" style="flex: 0 0 auto">
             <button class="btn small secondary" @click="startReschedule(a)">Remarcar</button>

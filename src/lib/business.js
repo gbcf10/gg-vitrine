@@ -22,15 +22,16 @@ export function createBusinessContext() {
       this.loading = true
       try {
         const members = unwrap(await supabase.from('business_members')
-          .select('business_id, role').eq('user_id', session.user.id).limit(1))
+          .select('business_id').eq('user_id', session.user.id).limit(1))
         if (!members.length) {
           this.business = this.subscription = this.plan = null
           return
         }
-        const id = members[0].business_id
-        this.business = unwrap(await supabase.from('businesses').select('*').eq('id', id).single())
+        this.business = unwrap(await supabase.from('businesses').select('*').eq('id', members[0].business_id).single())
+        // A assinatura pertence ao dono do estabelecimento e cobre todos os negócios dele.
         this.subscription = unwrap(await supabase.from('subscriptions')
-          .select('*, effective_price, plan:plans(*)').eq('business_id', id).maybeSingle())
+          .select('*, effective_price, charge_value, plan:plans(*)')
+          .eq('owner_id', this.business.created_by).maybeSingle())
         this.plan = this.subscription?.plan ?? null
       } finally {
         this.loading = false

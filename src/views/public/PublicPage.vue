@@ -1,21 +1,18 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 import { supabase } from '@/lib/supabase'
 import { brandVars } from '@/lib/colors'
 import { plural } from '@/lib/format'
-import { KINDS, APP_NAME } from '@/config/brand'
+import { APP_NAME } from '@/config/brand'
 import AppLogo from '@/components/AppLogo.vue'
+import Icon from '@/components/Icon.vue'
 import LinkButtons from '@/components/public/LinkButtons.vue'
 import GallerySection from '@/components/public/GallerySection.vue'
 import ReviewsSection from '@/components/public/ReviewsSection.vue'
 import LoyaltySection from '@/components/public/LoyaltySection.vue'
 import Stars from '@/components/public/Stars.vue'
 import AgendaBooking from '@/components/public/AgendaBooking.vue'
-import CatalogOrder from '@/components/public/CatalogOrder.vue'
-import QuoteRequest from '@/components/public/QuoteRequest.vue'
-import ReservationRequest from '@/components/public/ReservationRequest.vue'
-import EventsList from '@/components/public/EventsList.vue'
 
 // preset: dados prontos (usado pela pré-visualização de desenvolvimento).
 const props = defineProps({ preset: { type: Object, default: null } })
@@ -23,24 +20,36 @@ const route = useRoute()
 const business = ref(props.preset)
 const notFound = ref(false)
 
-const BODY = {
-  agenda: AgendaBooking,
-  cardapio: CatalogOrder,
-  orcamento: QuoteRequest,
-  reserva: ReservationRequest,
-  evento: EventsList,
-}
-const body = computed(() => BODY[business.value?.kind])
-const isCard = computed(() => business.value?.kind === 'cartao')
 const brandStyle = computed(() => brandVars(business.value?.primary_color))
 
+// Scroll suave pro bloco de agendamento (sticky CTA do mobile).
+function scrollToBooking() {
+  const el = document.getElementById('agendar')
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+let io
 onMounted(async () => {
-  if (props.preset) return
-  const { data } = await supabase.rpc('get_public_business', { p_slug: route.params.slug })
-  if (!data) { notFound.value = true; return }
-  business.value = data
-  document.title = `${data.name} · ${KINDS[data.kind]?.label ?? APP_NAME}`
+  if (!props.preset) {
+    const { data } = await supabase.rpc('get_public_business', { p_slug: route.params.slug })
+    if (!data) { notFound.value = true; return }
+    business.value = data
+    document.title = `${data.name} · ${APP_NAME}`
+  }
+  if (typeof IntersectionObserver === 'undefined') return
+  io = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) { e.target.classList.add('is-visible'); io.unobserve(e.target) }
+      }
+    },
+    { rootMargin: '0px 0px -8% 0px', threshold: 0.08 },
+  )
+  requestAnimationFrame(() => {
+    document.querySelectorAll('[data-pub-reveal]').forEach((el) => io.observe(el))
+  })
 })
+onBeforeUnmount(() => io?.disconnect())
 </script>
 
 <template>
@@ -53,48 +62,69 @@ onMounted(async () => {
   </div>
 
   <div v-else-if="business" :style="brandStyle" style="min-height: 100vh">
-    <!-- Cartão digital: layout centralizado -->
-    <header v-if="isCard" class="biz-hero">
-      <div class="biz-glow" />
-      <div class="container card-head">
-        <img v-if="business.logo_url" :src="business.logo_url" alt="" class="biz-logo big" />
-        <div v-else class="biz-logo big initial">{{ business.name.charAt(0).toUpperCase() }}</div>
-        <p class="eyebrow" style="margin: 16px 0 4px">{{ business.category }}</p>
-        <h1 class="gradient-text" style="margin: 0">{{ business.name }}</h1>
-        <div v-if="business.reviews?.count" class="rating"><Stars :value="Number(business.reviews.average)" /> <small>{{ plural(business.reviews.count, 'avaliação', 'avaliações') }}</small></div>
-        <p v-if="business.description" class="muted" style="margin: 12px auto 0; max-width: 520px">{{ business.description }}</p>
+    <header class="biz-hero rich">
+      <div class="biz-cover">
+        <div v-if="business.live" class="biz-live-pill">
+          <span class="dot" />
+          <span>Agendando online</span>
+        </div>
+        <div class="container biz-cover-inner">
+          <!-- espaço reservado — a logo "flutua" sobre a capa -->
+        </div>
       </div>
-    </header>
 
-    <header v-else class="biz-hero">
-      <div class="biz-glow" />
-      <div class="container biz-head">
-        <img v-if="business.logo_url" :src="business.logo_url" alt="" class="biz-logo" />
-        <div v-else class="biz-logo initial">{{ business.name.charAt(0).toUpperCase() }}</div>
-        <div style="min-width: 0">
-          <p class="eyebrow" style="margin-bottom: 4px">{{ business.category }}</p>
-          <h1 class="gradient-text" style="margin: 0">{{ business.name }}</h1>
-          <div v-if="business.reviews?.count" class="rating"><Stars :value="Number(business.reviews.average)" /> <small>{{ String(business.reviews.average).replace('.', ',') }} · {{ plural(business.reviews.count, 'avaliação', 'avaliações') }}</small></div>
-          <div v-else-if="business.address" class="muted" style="margin-top: 4px; font-size: 0.9rem">{{ business.address }}</div>
+      <div class="container">
+        <div class="biz-rich-head">
+          <img v-if="business.logo_url" :src="business.logo_url" :alt="business.name" class="biz-rich-logo" />
+          <div v-else class="biz-rich-logo initial">{{ business.name.charAt(0).toUpperCase() }}</div>
+
+          <div class="biz-rich-info">
+            <span class="biz-rich-pill">{{ business.category }}</span>
+            <h1>{{ business.name }}</h1>
+            <div class="biz-rich-meta">
+              <span v-if="business.reviews?.count" class="biz-rich-rating">
+                <Stars :value="Number(business.reviews.average)" />
+                <strong>{{ String(business.reviews.average).replace('.', ',') }}</strong>
+                <small class="muted">· {{ plural(business.reviews.count, 'avaliação', 'avaliações') }}</small>
+              </span>
+              <span v-if="business.address"><Icon name="map" />{{ business.address }}</span>
+              <span v-if="business.phone"><Icon name="phone" />{{ business.phone }}</span>
+            </div>
+            <p v-if="business.description" class="biz-rich-desc">{{ business.description }}</p>
+          </div>
         </div>
       </div>
     </header>
 
-    <main class="container pub-main" :class="{ narrowed: isCard }">
-      <template v-if="isCard">
-        <div v-if="!business.live" class="card"><p>Esta página está temporariamente indisponível.</p></div>
-        <LinkButtons v-else :business="business" big />
-      </template>
-      <template v-else>
-        <p v-if="business.description" class="muted">{{ business.description }}</p>
+    <main class="container pub-main" :class="{ 'has-sticky': business.live }">
+      <div data-pub-reveal class="pub-reveal">
         <LinkButtons :business="business" />
-        <component :is="body" v-if="body" :business="business" />
-      </template>
+      </div>
+
+      <section id="agendar" class="pub-section space" data-pub-reveal>
+        <div class="pub-section-head">
+          <span class="eyebrow">Agendamento</span>
+          <h2>Escolha o melhor horário</h2>
+        </div>
+        <div class="pub-reveal is-visible">
+          <AgendaBooking :business="business" />
+        </div>
+      </section>
 
       <template v-if="business.live">
-        <LoyaltySection :business="business" />
-        <GallerySection :photos="business.gallery" />
-        <ReviewsSection :business="business" />
+        <section class="pub-section space" data-pub-reveal>
+          <LoyaltySection :business="business" />
+        </section>
+        <section v-if="business.gallery?.length" class="pub-section space" data-pub-reveal>
+          <div class="pub-section-head">
+            <span class="eyebrow">Galeria</span>
+            <h2>Veja nosso trabalho</h2>
+          </div>
+          <GallerySection :photos="business.gallery" />
+        </section>
+        <section v-if="business.reviews" class="pub-section space" data-pub-reveal>
+          <ReviewsSection :business="business" />
+        </section>
       </template>
 
       <div class="powered">
@@ -104,17 +134,19 @@ onMounted(async () => {
         Seus dados são usados só para este atendimento. <RouterLink to="/privacidade">Política de privacidade</RouterLink>
       </p>
     </main>
+
+    <div v-if="business.live" class="biz-sticky-cta">
+      <button class="btn large" @click="scrollToBooking">
+        <Icon name="calendar" /> Agendar horário
+      </button>
+    </div>
   </div>
 
   <div v-else class="narrow muted" style="text-align: center">Carregando...</div>
 </template>
 
 <style scoped>
-.card-head { position: relative; max-width: 560px; text-align: center; padding: 40px 0 28px; }
-.biz-logo.big { width: 110px; height: 110px; border-radius: 28px; margin: 0 auto; font-size: 2.6rem; }
-.rating { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 0.85rem; }
-.card-head .rating { justify-content: center; }
-.narrowed { max-width: 560px; }
 .privacy-note { text-align: center; font-size: 0.75rem; color: var(--muted); margin-top: 8px; }
 .privacy-note a { color: var(--muted); text-decoration: underline; }
+.biz-rich-info .biz-rich-rating small { font-weight: 500; }
 </style>

@@ -1,4 +1,4 @@
-// GG Vitrine — Edge Function "asaas-checkout"
+// MarqueAí — Edge Function "asaas-checkout"
 //
 // Chamada pelo painel (usuário logado). Ações:
 //   checkout   → cria cliente + assinatura no Asaas e devolve o link da fatura em aberto.
@@ -28,7 +28,7 @@ const ASAAS_URL = Deno.env.get('ASAAS_ENV')?.trim().toLowerCase() === 'productio
 async function asaas(path: string, method = 'GET', body?: unknown) {
   const res = await fetch(ASAAS_URL + path, {
     method,
-    headers: { access_token: ASAAS_KEY!, 'Content-Type': 'application/json', 'User-Agent': 'GGVitrine' },
+    headers: { access_token: ASAAS_KEY!, 'Content-Type': 'application/json', 'User-Agent': 'MarqueAi' },
     body: body ? JSON.stringify(body) : undefined,
   })
   const data = await res.json().catch(() => ({}))
@@ -53,22 +53,25 @@ Deno.serve(async (req) => {
     const { data: { user } } = await userClient.auth.getUser()
     if (!user) return json({ error: 'Sua sessão expirou. Entre novamente.' }, 401)
 
-    const { action = 'checkout', business_id, document, name, method } = await req.json()
-    const { data: isOwner } = await userClient.rpc('is_owner', { bid: business_id })
+    const { action = 'checkout', document, name, method, owner_id: argOwner } = await req.json()
     const { data: isAdmin } = await userClient.rpc('is_platform_admin')
-    const allowed = action === 'sync-price' ? isAdmin : isOwner || isAdmin
-    if (!allowed) return json({ error: 'Sem permissão.' }, 403)
+    // Admin pode sincronizar preço de qualquer dono; o próprio usuário mexe só na dele.
+    const ownerId = action === 'sync-price' && isAdmin ? argOwner : user.id
+    if (!ownerId) return json({ error: 'Sem permissão.' }, 403)
 
     // Forma de pagamento escolhida (define a taxa repassada na mensalidade).
     if (action === 'checkout') {
       if (!BILLING_TYPE[method]) return json({ error: 'Escolha cartão, PIX ou boleto.' }, 400)
-      await admin.from('subscriptions').update({ billing_method: method }).eq('business_id', business_id)
+      await admin.from('subscriptions').update({ billing_method: method }).eq('owner_id', ownerId)
     }
 
+    // Carrega assinatura do dono + primeira vitrine (pra montar o nome na descrição).
     const { data: sub } = await admin.from('subscriptions')
-      .select('*, effective_price, charge_value, plan:plans(name), business:businesses(name, phone)')
-      .eq('business_id', business_id).maybeSingle()
+      .select('*, effective_price, charge_value, plan:plans(name)')
+      .eq('owner_id', ownerId).maybeSingle()
     if (!sub) return json({ error: 'Escolha um plano primeiro.' }, 400)
+    const { data: biz } = await admin.from('businesses')
+      .select('name, phone').eq('created_by', ownerId).order('created_at').limit(1).maybeSingle()
     const value = Number(sub.charge_value)                    // plano + taxa do meio de pagamento
     const billingType = BILLING_TYPE[sub.billing_method ?? 'pix']
 
@@ -106,27 +109,26 @@ Deno.serve(async (req) => {
     if (!customerId) {
       if (doc.length !== 11 && doc.length !== 14) return json({ error: 'Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido.' }, 400)
       const customer = await asaas('/customers', 'POST', {
-        name: String(name || sub.business.name).slice(0, 100),
+        name: String(name || biz?.name || 'Cliente').slice(0, 100),
         cpfCnpj: doc,
         email: user.email,
-        mobilePhone: digits(sub.business.phone) || undefined,
-        externalReference: business_id,
+        mobilePhone: digits(biz?.phone) || undefined,
+        externalReference: ownerId,
       })
       customerId = customer.id
     }
 
     let subId = sub.status === 'canceled' ? null : sub.gateway_subscription_id
     if (subId) {
-      // Já existe: garante forma de pagamento e valor atualizados na fatura em aberto.
       await asaas(`/subscriptions/${subId}`, 'POST', { billingType, value, updatePendingPayments: true })
     } else {
       const created = await asaas('/subscriptions', 'POST', {
         customer: customerId,
-        billingType,                            // cartão (cobrança automática), PIX ou boleto
+        billingType,
         value,
         nextDueDate: todayBR(),
         cycle: 'MONTHLY',
-        description: `GG Vitrine: plano ${sub.plan.name} (${sub.business.name})`,
+        description: `MarqueAí: plano ${sub.plan.name}`,
         externalReference: sub.id,
       })
       subId = created.id

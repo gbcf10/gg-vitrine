@@ -1,4 +1,4 @@
-// GG Vitrine — Edge Function "asaas-webhook"
+// MarqueAí — Edge Function "asaas-webhook"
 //
 // Recebe os avisos do Asaas (pagamento criado, confirmado, recebido, vencido...)
 // e atualiza assinatura, faturas e bloqueio no banco.
@@ -21,7 +21,7 @@ const ASAAS_URL = Deno.env.get('ASAAS_ENV')?.trim().toLowerCase() === 'productio
 async function asaas(path: string, method: string, body: unknown) {
   const res = await fetch(ASAAS_URL + path, {
     method,
-    headers: { access_token: ASAAS_KEY!, 'Content-Type': 'application/json', 'User-Agent': 'GGVitrine' },
+    headers: { access_token: ASAAS_KEY!, 'Content-Type': 'application/json', 'User-Agent': 'MarqueAi' },
     body: JSON.stringify(body),
   })
   if (!res.ok) throw new Error(`Asaas ${res.status}: ${await res.text()}`)
