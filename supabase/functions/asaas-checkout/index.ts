@@ -1,4 +1,5 @@
-// MarqueAí — Edge Function "asaas-checkout"
+// @ts-nocheck -- roda em Deno (Supabase Edge Function), não no TS do VSCode
+// GG Vitrine — Edge Function "asaas-checkout"
 //
 // Chamada pelo painel (usuário logado). Ações:
 //   checkout   → cria cliente + assinatura no Asaas e devolve o link da fatura em aberto.
@@ -28,7 +29,7 @@ const ASAAS_URL = Deno.env.get('ASAAS_ENV')?.trim().toLowerCase() === 'productio
 async function asaas(path: string, method = 'GET', body?: unknown) {
   const res = await fetch(ASAAS_URL + path, {
     method,
-    headers: { access_token: ASAAS_KEY!, 'Content-Type': 'application/json', 'User-Agent': 'MarqueAi' },
+    headers: { access_token: ASAAS_KEY!, 'Content-Type': 'application/json', 'User-Agent': 'GGVitrine' },
     body: body ? JSON.stringify(body) : undefined,
   })
   const data = await res.json().catch(() => ({}))
@@ -128,7 +129,7 @@ Deno.serve(async (req) => {
         value,
         nextDueDate: todayBR(),
         cycle: 'MONTHLY',
-        description: `MarqueAí: plano ${sub.plan.name}`,
+        description: `GG Vitrine: plano ${sub.plan.name}`,
         externalReference: sub.id,
       })
       subId = created.id

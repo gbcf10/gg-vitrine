@@ -1,5 +1,5 @@
 -- =====================================================================
--- MarqueAí — 0010: flag de onboarding completo
+-- GG Vitrine — 0010: flag de onboarding completo
 --
 -- Como aplicar: Supabase > SQL Editor > cole e Run. Idempotente.
 --

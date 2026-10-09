@@ -1,5 +1,5 @@
 -- =====================================================================
--- MarqueAí — 0009: cadastro cai aprovado automaticamente
+-- GG Vitrine — 0009: cadastro cai aprovado automaticamente
 --
 -- Como aplicar: Supabase > SQL Editor > cole e Run. Idempotente.
 --

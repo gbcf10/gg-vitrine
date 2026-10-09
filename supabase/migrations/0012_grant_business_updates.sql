@@ -1,5 +1,5 @@
 -- =====================================================================
--- MarqueAí — 0012: dono pode atualizar staff_label e onboarding_done
+-- GG Vitrine — 0012: dono pode atualizar staff_label e onboarding_done
 --
 -- Como aplicar: Supabase > SQL Editor > cole e Run. Idempotente.
 --

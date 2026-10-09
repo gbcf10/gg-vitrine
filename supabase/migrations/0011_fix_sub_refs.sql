@@ -1,5 +1,5 @@
 -- =====================================================================
--- MarqueAí — 0011: corrige funções que ainda apontam pra subscriptions.business_id
+-- GG Vitrine — 0011: corrige funções que ainda apontam pra subscriptions.business_id
 --
 -- Como aplicar: Supabase > SQL Editor > cole e Run. Idempotente.
 --

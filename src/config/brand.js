@@ -1,6 +1,6 @@
 // Identidade da plataforma. Trocar o nome aqui muda em todo o sistema.
-export const APP_NAME = 'MarqueAí'
-export const APP_DOMAIN = 'marqueai.shop'
+export const APP_NAME = 'GG Vitrine'
+export const APP_DOMAIN = 'ggvitrine.online'
 export const APP_SLOGAN = 'Mostre seus serviços. Receba clientes.'
 export const SUPPORT_WHATSAPP = '5521967449745' // (21) 96744-9745
 
@@ -9,7 +9,7 @@ export const SUPPORT_WHATSAPP = '5521967449745' // (21) 96744-9745
 export const LEGAL = {
   company: 'G&G Soluções',
   cnpj: '',                               // ex.: '00.000.000/0001-00'
-  email: 'contato@marqueai.shop',
+  email: 'contato@ggvitrine.online',
   city: '',                               // foro, ex.: 'São Paulo/SP'
   updatedAt: '02/10/2026',
 }

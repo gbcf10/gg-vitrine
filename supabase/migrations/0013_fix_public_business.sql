@@ -1,5 +1,5 @@
 -- =====================================================================
--- MarqueAí — 0013: get_public_business usa owner_id
+-- GG Vitrine — 0013: get_public_business usa owner_id
 --
 -- Como aplicar: Supabase > SQL Editor > cole e Run. Idempotente.
 -- =====================================================================
