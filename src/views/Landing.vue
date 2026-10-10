@@ -1651,20 +1651,8 @@ onBeforeUnmount(() => {
   .mock-panel-head small {
     font-size: 0.62rem;
   }
-  /* Toast do passo 3 vai pro canto inferior direito, não cobre o nome */
-  .mock-toast {
-    left: auto;
-    right: 10px;
-    bottom: 10px;
-    transform: translate(0, 10px);
-    max-width: 70%;
-  }
-  .journey-step.is-visible .mock-toast {
-    animation: toastPopRight 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) var(--d, 0s) forwards;
-  }
-  @keyframes toastPopRight {
-    to { opacity: 1; transform: translate(0, 0); }
-  }
+  /* Toast do passo 3 esconde no mobile — cobre os slots e polui a tela */
+  .mock-toast { display: none; }
 }
 
 @media (max-width: 560px) {
