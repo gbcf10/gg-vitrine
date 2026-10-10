@@ -12,6 +12,17 @@ const plans = ref([])
 
 const sampleCategories = CATEGORIES.filter((c) => c !== 'Outro').slice(0, 8)
 
+// Botão "voltar ao topo" aparece quando o usuário passa de ~80% da tela.
+const showTopBtn = ref(false)
+function onScroll() {
+  const scrolled = window.scrollY + window.innerHeight
+  const total = document.documentElement.scrollHeight
+  showTopBtn.value = scrolled / total > 0.8
+}
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
 // Copy específico por plano: tagline (quem é o alvo) + bullets.
 // As features em si são as mesmas em todos os planos; o que muda é o número
 // de estabelecimentos — e é isso que os bullets reforçam.
@@ -130,8 +141,13 @@ onMounted(async () => {
   requestAnimationFrame(() => {
     document.querySelectorAll('[data-reveal]').forEach((el) => io.observe(el))
   })
+  window.addEventListener('scroll', onScroll, { passive: true })
+  onScroll()
 })
-onBeforeUnmount(() => io?.disconnect())
+onBeforeUnmount(() => {
+  io?.disconnect()
+  window.removeEventListener('scroll', onScroll)
+})
 </script>
 
 <template>
@@ -528,6 +544,13 @@ onBeforeUnmount(() => io?.disconnect())
       <span class="muted">Um produto <a href="https://portfoliogegsolucoes.netlify.app/" target="_blank" rel="noopener">G&amp;G Soluções</a></span>
     </div>
   </footer>
+
+  <!-- Botão "voltar ao topo" (aparece perto do rodapé) -->
+  <transition name="top-fade">
+    <button v-if="showTopBtn" class="top-btn" aria-label="Voltar ao topo" @click="scrollToTop">
+      <Icon name="arrow-up" />
+    </button>
+  </transition>
 </template>
 
 <style scoped>
@@ -1656,5 +1679,30 @@ onBeforeUnmount(() => io?.disconnect())
   .journey-visual { min-height: 240px; padding: 16px; }
   .journey-title { font-size: 1.1rem; }
   .journey-text { font-size: 0.9rem; }
+}
+
+/* Botão "voltar ao topo" */
+.top-btn {
+  position: fixed;
+  right: 20px;
+  bottom: 24px;
+  z-index: 60;
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  border: 1px solid rgba(59, 130, 246, 0.5);
+  background: linear-gradient(140deg, var(--brand), var(--brand-strong));
+  color: #fff;
+  display: grid; place-items: center;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 24px var(--brand-glow);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.top-btn:hover { transform: translateY(-3px); box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45), 0 0 32px var(--brand-glow); }
+.top-btn :deep(svg) { width: 20px; height: 20px; }
+.top-fade-enter-active, .top-fade-leave-active { transition: opacity 0.25s ease, transform 0.25s ease; }
+.top-fade-enter-from, .top-fade-leave-to { opacity: 0; transform: translateY(10px) scale(0.9); }
+
+@media (prefers-reduced-motion: reduce) {
+  .top-btn, .top-btn:hover { transition: none; transform: none; }
 }
 </style>
