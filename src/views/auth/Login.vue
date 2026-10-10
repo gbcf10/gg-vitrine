@@ -19,6 +19,7 @@ const error = ref('')
 const info = ref('')
 const loading = ref(false)
 const resendIn = ref(0)
+const showPassword = ref(false)
 
 function switchMode(m) {
   mode.value = m
@@ -197,9 +198,12 @@ async function forgot() {
                 <input id="email" v-model="email" type="email" autocomplete="email" required placeholder=" " />
                 <label for="email"><Icon name="mail" />E-mail</label>
               </div>
-              <div class="float-field" :class="{ filled: password }">
-                <input id="password" v-model="password" type="password" autocomplete="current-password" required placeholder=" " />
+              <div class="float-field pwd-field" :class="{ filled: password }">
+                <input id="password" v-model="password" :type="showPassword ? 'text' : 'password'" autocomplete="current-password" required placeholder=" " />
                 <label for="password"><Icon name="key" />Senha</label>
+                <button type="button" class="pwd-toggle" :aria-label="showPassword ? 'Ocultar senha' : 'Mostrar senha'" @click="showPassword = !showPassword">
+                  <Icon :name="showPassword ? 'eye-off' : 'eye'" />
+                </button>
               </div>
               <div class="form-row-helper">
                 <button type="button" class="link-btn" @click="forgot">Esqueci minha senha</button>

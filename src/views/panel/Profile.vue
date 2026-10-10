@@ -13,6 +13,7 @@ const error = ref('')
 const uploading = ref(false)
 const dragOver = ref(false)
 const newPassword = ref('')
+const showPassword = ref(false)
 const fileInput = ref(null)
 
 // Paleta completa: cada linha é uma cor, do tom mais claro ao mais escuro.
@@ -322,9 +323,12 @@ async function changePassword() {
     </div>
 
     <div class="ff-row ff-row-pwd">
-      <div class="ff ff-wide">
-        <input id="pf-pwd" v-model="newPassword" type="password" minlength="8" autocomplete="new-password" required placeholder=" " />
+      <div class="ff ff-wide pwd-field">
+        <input id="pf-pwd" v-model="newPassword" :type="showPassword ? 'text' : 'password'" minlength="8" autocomplete="new-password" required placeholder=" " />
         <label for="pf-pwd">Nova senha <small>(mín. 8 caracteres)</small></label>
+        <button type="button" class="pwd-toggle" :aria-label="showPassword ? 'Ocultar senha' : 'Mostrar senha'" @click="showPassword = !showPassword">
+          <Icon :name="showPassword ? 'eye-off' : 'eye'" />
+        </button>
       </div>
       <div class="ff ff-btn">
         <button class="btn secondary">

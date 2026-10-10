@@ -9,7 +9,7 @@ if (!url || !key) {
 }
 
 // Funções do banco que gravam algo (as demais funções só consultam).
-const SAVING_RPCS = ['choose_plan', 'request_business', 'admin_set_business_status', 'admin_update_subscription', 'admin_register_payment']
+const SAVING_RPCS = ['request_business', 'admin_set_business_status', 'admin_update_subscription', 'admin_register_payment']
 
 // Junta gravações seguidas (ex.: apagar e gravar de novo os horários) num aviso só.
 let pending = null

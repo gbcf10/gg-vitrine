@@ -72,6 +72,7 @@ const showPayForm = ref(false)
 const paying = ref(false)
 const onlineUnavailable = ref(false)
 const info = ref('')
+const invoiceUrl = ref('')
 
 async function functionError(err) {
   try { return (await err.context.json()).error } catch { return err.message }
@@ -100,8 +101,8 @@ async function payOnline() {
     changingMethod.value = false
     info.value = `Forma de pagamento alterada para ${METHODS[payForm.value.method].label}. Vale a partir da próxima fatura.`
   } else {
-    window.open(data.invoiceUrl, '_blank', 'noopener')
-    info.value = 'Abrimos a página de pagamento em outra aba. Assim que o pagamento for confirmado, seu painel é liberado.'
+    invoiceUrl.value = data.invoiceUrl
+    info.value = ''
   }
   await biz.reload()
   loadQuote()
@@ -226,6 +227,19 @@ async function cancelSubscription() {
     <div v-if="info" class="alert alert-success">
       <span class="alert-icon"><Icon name="check" /></span>
       <span>{{ info }}</span>
+    </div>
+
+    <!-- Link do pagamento gerado (clicável = user action, sem bloqueio de popup) -->
+    <div v-if="invoiceUrl" class="alert alert-success" style="align-items: center">
+      <span class="alert-icon"><Icon name="card" /></span>
+      <div style="flex: 1">
+        <strong>Fatura gerada!</strong>
+        <span style="display: block; font-size: 0.88rem">Clique no botão pra abrir a página de pagamento. Assim que o pagamento for confirmado, seu painel é liberado.</span>
+      </div>
+      <a class="btn" :href="invoiceUrl" target="_blank" rel="noopener" @click="invoiceUrl = ''">
+        <Icon name="card" />
+        Abrir pagamento
+      </a>
     </div>
 
     <!-- Forma de pagamento atual -->

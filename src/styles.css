@@ -575,6 +575,21 @@ th { font-size: 0.72rem; color: var(--muted); font-weight: 700; text-transform: 
 .summary-row.total .value { font-size: 1.15rem; font-weight: 800; color: var(--text); }
 .summary-row s { color: var(--muted); margin-right: 6px; font-weight: 500; }
 
+/* Toggle de mostrar/ocultar senha */
+.pwd-field { position: relative; }
+.pwd-field input { padding-right: 44px; }
+.pwd-toggle {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  display: grid; place-items: center;
+  width: 32px; height: 32px;
+  border-radius: 8px; border: none;
+  background: transparent; color: var(--muted);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.pwd-toggle:hover { color: var(--text); background: rgba(255, 255, 255, 0.05); }
+.pwd-toggle svg { width: 18px; height: 18px; }
+
 /* Floating labels (padrão do app) */
 .ff { position: relative; margin-bottom: 12px; }
 .ff input, .ff textarea, .ff select {

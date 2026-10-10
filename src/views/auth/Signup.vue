@@ -17,6 +17,7 @@ const codeSent = ref(false)
 const code = ref('')
 const loading = ref(false)
 const verifying = ref(false)
+const showPassword = ref(false)
 const resendCooldown = ref(0)
 
 watch(() => form.value.name, (name) => {
@@ -263,12 +264,15 @@ function startResendCooldown() {
             </label>
           </div>
 
-          <div class="float-field password-field" :class="{ filled: form.password }">
-            <input id="pw" v-model="form.password" type="password" minlength="8" autocomplete="new-password" required placeholder=" " />
+          <div class="float-field password-field pwd-field" :class="{ filled: form.password }">
+            <input id="pw" v-model="form.password" :type="showPassword ? 'text' : 'password'" minlength="8" autocomplete="new-password" required placeholder=" " />
             <label for="pw">
               <Icon name="key" />
               Senha
             </label>
+            <button type="button" class="pwd-toggle" :aria-label="showPassword ? 'Ocultar senha' : 'Mostrar senha'" @click="showPassword = !showPassword">
+              <Icon :name="showPassword ? 'eye-off' : 'eye'" />
+            </button>
             <small class="field-hint">Mínimo de 8 caracteres</small>
           </div>
 
