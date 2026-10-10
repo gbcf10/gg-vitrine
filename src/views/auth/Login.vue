@@ -59,9 +59,11 @@ async function sendCode() {
   })
   loading.value = false
   if (err) {
-    error.value = /not found/i.test(err.message)
-      ? 'Não encontramos uma conta com esse e-mail.'
-      : err.message
+    if (/not found|signups not allowed/i.test(err.message)) {
+      error.value = 'Não encontramos uma conta com esse e-mail. Crie uma em "Cadastrar estabelecimento".'
+    } else {
+      error.value = err.message
+    }
     return
   }
   codeSent.value = true
