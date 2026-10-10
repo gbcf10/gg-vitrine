@@ -1535,25 +1535,126 @@ onBeforeUnmount(() => io?.disconnect())
   .section { padding: 56px 0; }
 }
 
+/* =====================================================================
+   Mobile <= 760px: Hero limpo (sem floating cards) + Journey 100% vertical
+   ===================================================================== */
+@media (max-width: 760px) {
+  /* --- HERO: mantém só o phone + chip da URL, esconde os floats --- */
+  .hero-visual {
+    min-height: 0;
+    padding: 56px 0 20px;
+  }
+  .phone {
+    width: 220px;
+    animation: none;
+  }
+  /* Esconde os cards flutuantes de stat e notificação no mobile */
+  .float-b,
+  .float-c {
+    display: none;
+  }
+  /* Reposiciona o chip da URL no topo centralizado, sem brigar com nada */
+  .float-a {
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    animation: none;
+    font-size: 0.78rem;
+    padding: 8px 14px;
+  }
+
+  /* --- JOURNEY: layout 100% vertical empilhado --- */
+  .journey {
+    max-width: 420px;
+  }
+  .journey-step {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: left;
+    gap: 20px;
+    padding-bottom: 44px;
+  }
+  /* Visual ocupa a largura toda, acima do texto */
+  .journey-visual {
+    width: 100%;
+    max-width: 100%;
+    aspect-ratio: auto;
+    min-height: 260px;
+    padding: 20px;
+  }
+  .journey-copy {
+    padding-top: 0;
+    max-width: none;
+  }
+  /* Conector vertical centralizado entre os passos */
+  .journey-connector {
+    left: 50%;
+    top: auto;
+    bottom: 0;
+    height: 32px;
+    transform: translateX(-50%) scaleY(0);
+    transform-origin: top center;
+  }
+  .journey-step.is-visible .journey-connector {
+    transform: translateX(-50%) scaleY(1);
+  }
+  /* Hierarquia tipográfica mais confortável quando o texto está sozinho */
+  .journey-title {
+    font-size: 1.2rem;
+  }
+  .journey-text {
+    font-size: 0.95rem;
+  }
+  /* Mocks: volta ao tamanho confortável já que não dividem espaço */
+  .mock-form,
+  .mock-panel,
+  .mock-vitrine {
+    gap: 10px;
+    padding-top: 20px;
+  }
+  .mock-service { padding: 8px 10px; }
+  .mock-service-body strong { font-size: 0.78rem; }
+  .mock-service-body small { font-size: 0.64rem; }
+  .mock-service-price { font-size: 0.76rem; }
+  .mock-service-dot { width: 24px; height: 24px; }
+  .mock-service-dot svg { width: 12px; height: 12px; }
+  .mock-input,
+  .mock-submit {
+    font-size: 0.8rem;
+    padding: 8px 10px;
+    min-height: 32px;
+  }
+  .mock-field small,
+  .mock-panel-head small {
+    font-size: 0.62rem;
+  }
+  /* Toast do passo 3 vai pro canto inferior direito, não cobre o nome */
+  .mock-toast {
+    left: auto;
+    right: 10px;
+    bottom: 10px;
+    transform: translate(0, 10px);
+    max-width: 70%;
+  }
+  .journey-step.is-visible .mock-toast {
+    animation: toastPopRight 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) var(--d, 0s) forwards;
+  }
+  @keyframes toastPopRight {
+    to { opacity: 1; transform: translate(0, 0); }
+  }
+}
+
 @media (max-width: 560px) {
   .hero-grid { padding: 32px 0 48px; }
   .hero-proof { gap: 14px; }
   .proof-item strong { font-size: 1.1rem; }
   .proof-divider { height: 24px; }
-  .hero-visual { min-height: 440px; }
-  .phone { width: 240px; }
-  .float-b, .float-c { padding: 10px 12px; }
-  .float-b { right: -6px; }
-  .float-c { right: 0; bottom: 8%; }
+  .phone { width: 200px; }
   .bento { grid-template-columns: 1fr; }
   .bento-xl { grid-column: auto; padding: 24px; }
   .section-head { margin-bottom: 32px; }
-  .journey-step { gap: 14px; padding-bottom: 28px; }
-  .journey-visual { width: 150px; max-width: 150px; padding: 12px; }
-  .journey-connector { left: 75px; top: 150px; }
-  .journey-title { font-size: 1.05rem; }
+  .journey-visual { min-height: 240px; padding: 16px; }
+  .journey-title { font-size: 1.1rem; }
   .journey-text { font-size: 0.9rem; }
-  .mock-input, .mock-submit { font-size: 0.72rem; padding: 6px 8px; min-height: 26px; }
-  .mock-field small, .mock-panel-head small { font-size: 0.56rem; }
 }
 </style>

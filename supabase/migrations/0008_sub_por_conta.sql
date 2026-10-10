@@ -15,14 +15,14 @@ alter table plans add column if not exists max_businesses int not null default 1
 
 -- Migra assinaturas existentes pro novo plano "solo" antes de deletar os antigos.
 insert into plans (id, name, base_price, max_professionals, max_customers, max_businesses, features, sort_order)
-values ('solo', 'Solo', 49.90, null, null, 1, array[]::text[], 1)
+values ('solo', 'Solo', 29.90, null, null, 1, array[]::text[], 1)
 on conflict (id) do nothing;
 update subscriptions set plan_id = 'solo' where plan_id <> 'solo';
 delete from plans where id <> 'solo';
 
 insert into plans (id, name, base_price, max_professionals, max_customers, max_businesses, features, sort_order) values
-  ('equipe', 'Equipe', 99.90,  null, null, 3, array[]::text[], 2),
-  ('rede',   'Rede',  149.90, null, null, 5, array[]::text[], 3)
+  ('equipe', 'Equipe', 59.90,  null, null, 3, array[]::text[], 2),
+  ('rede',   'Rede',   89.90, null, null, 5, array[]::text[], 3)
 on conflict (id) do nothing;
 
 -- Features são iguais nos 3 planos: tudo incluso.
